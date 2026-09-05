@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#f7f8f7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="知阅 IELTS">
+  <title>知阅 · AI 英语阅读</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <svg class="svg-sprite" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5Z"/><path d="M4 6.5v13A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+    <symbol id="i-book" viewBox="0 0 24 24"><path d="M2 4.5A2.5 2.5 0 0 1 4.5 2H10a2 2 0 0 1 2 2v17a2.6 2.6 0 0 0-2.6-2.6H2Z"/><path d="M22 4.5A2.5 2.5 0 0 0 19.5 2H14a2 2 0 0 0-2 2v17a2.6 2.6 0 0 1 2.6-2.6H22Z"/></symbol>
+    <symbol id="i-chart" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 16 4-5 4 3 5-7"/></symbol>
+    <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M4 14v-2a8 8 0 0 1 16 0v2"/><path d="M4 14h3v7H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 1-2ZM20 14h-3v7h2a2 2 0 0 0 2-2v-3a2 2 0 0 0-1-2Z"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10Z"/><path d="m14 7 3 3M4 20h6"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M9 5v14M15 5v14"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V21h-4v-.08A1.7 1.7 0 0 0 9 19.37a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.63 15a1.7 1.7 0 0 0-1.55-1H3v-4h.08A1.7 1.7 0 0 0 4.63 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.63a1.7 1.7 0 0 0 1-1.55V3h4v.08A1.7 1.7 0 0 0 15 4.63a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.37 9a1.7 1.7 0 0 0 1.55 1H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m0 0L7 8m5-5 5 5"/><path d="M5 13v7h14v-7"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></symbol>
+    <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.1 4.2a5 5 0 0 0 3.6 3.6L21 12l-4.3 1.1a5 5 0 0 0-3.6 3.6L12 21l-1.1-4.3a5 5 0 0 0-3.6-3.6L3 12l4.3-1.2a5 5 0 0 0 3.6-3.6Z"/></symbol>
+    <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M8.4 14.6A7 7 0 1 1 15.6 14.6C14.6 15.3 14 16.3 14 18h-4c0-1.7-.6-2.7-1.6-3.4Z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+    <symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M6 3h12v18l-6-4-6 4Z"/></symbol>
+    <symbol id="i-volume" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4Z"/><path d="M15 9a4 4 0 0 1 0 6M18 6a8 8 0 0 1 0 12"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 14H7L6 7M10 11v6M14 11v6"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l2-2a5 5 0 0 0-7-7l-1.1 1.1"/><path d="M14 11a5 5 0 0 0-7.5-.5l-2 2a5 5 0 0 0 7 7l1.1-1.1"/></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></symbol>
+    <symbol id="i-note" viewBox="0 0 24 24"><path d="M4 3h16v18H4zM8 8h8M8 12h8M8 16h5"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+    <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M6.1 8A7 7 0 0 1 18 6l2 6M18 16a7 7 0 0 1-12 2l-2-6"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v13m0 0 5-5m-5 5-5-5"/><path d="M5 20h14"/></symbol>
+    <symbol id="i-tablet" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M10 18h4"/></symbol>
+  </svg>
+
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <button class="brand" data-route="study" aria-label="返回学习首页"><span class="brand-glyph">R</span><span><strong>知阅 IELTS</strong><small>听说读写训练</small></span></button>
+      <nav class="primary-nav" aria-label="主导航">
+        <span class="nav-section-label">学习</span>
+        <button class="nav-button active" data-route="study"><svg><use href="#i-home"/></svg><span>今日学习</span></button>
+        <button class="nav-button" data-route="cambridge"><svg><use href="#i-file"/></svg><span>剑雅资料库</span></button>
+        <button class="nav-button" data-route="library"><svg><use href="#i-library"/></svg><span>阅读精读</span></button>
+        <button class="nav-button" data-route="listening"><svg><use href="#i-headphones"/></svg><span>听力训练</span></button>
+        <button class="nav-button" data-route="intensive"><svg><use href="#i-target"/></svg><span>AI 精听听写</span></button>
+        <button class="nav-button" data-route="speaking"><svg><use href="#i-mic"/></svg><span>口语训练</span></button>
+        <button class="nav-button" data-route="writing"><svg><use href="#i-pen"/></svg><span>写作训练</span></button>
+        <span class="nav-section-label secondary-label">复习</span>
+        <button class="nav-button" data-route="vocabulary"><svg><use href="#i-book"/></svg><span>词汇复习</span></button>
+        <button class="nav-button" data-route="analytics"><svg><use href="#i-chart"/></svg><span>学习记录</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <button class="nav-button" id="installApp"><svg><use href="#i-download"/></svg><span>安装到设备</span></button>
+        <button class="nav-button" id="deviceTransfer"><svg><use href="#i-tablet"/></svg><span>设备迁移</span></button>
+        <button class="nav-button" id="focusToggle"><svg><use href="#i-target"/></svg><span>专注模式</span></button>
+        <div class="profile"><button class="avatar" aria-label="个人中心">JL</button><span><strong>IELTS 学习者</strong><small>目标 7.0</small></span></div>
+      </div>
+    </aside>
+
+    <main class="app-main">
+      <button class="mobile-menu" id="mobileMenu" aria-label="打开菜单"><svg><use href="#i-menu"/></svg></button>
+      <div id="app"></div>
+    </main>
+  </div>
+
+  <button class="focus-exit" id="focusExit"><svg><use href="#i-x"/></svg><span>退出专注模式</span></button>
+
+  <dialog class="import-dialog" id="importDialog">
+    <form method="dialog" class="dialog-header">
+      <div><h2>导入英文内容</h2><p>选择内容来源，系统会提取正文并自动整理到资料库。</p></div>
+      <button class="icon-button" value="cancel" aria-label="关闭"><svg><use href="#i-x"/></svg></button>
+    </form>
+    <div class="import-tabs" role="tablist">
+      <button class="active" data-import-tab="text"><svg><use href="#i-note"/></svg>文本</button>
+      <button data-import-tab="image"><svg><use href="#i-image"/></svg>图片</button>
+      <button data-import-tab="pdf"><svg><use href="#i-file"/></svg>PDF</button>
+      <button data-import-tab="web"><svg><use href="#i-link"/></svg>网页</button>
+    </div>
+    <form id="importForm" class="import-form">
+      <section class="import-panel active" data-import-panel="text">
+        <label for="articleText">粘贴英文文章正文</label>
+        <textarea id="articleText" placeholder="Paste your English article here..." maxlength="50000"></textarea>
+        <span class="counter"><b id="textCount">0</b> / 50,000</span>
+      </section>
+      <section class="import-panel" data-import-panel="image">
+        <label class="drop-zone" for="imageFile"><svg><use href="#i-image"/></svg><strong>上传英文文章截图</strong><span>支持 JPG、PNG，演示版将创建示例文章</span><input id="imageFile" type="file" accept="image/*"></label>
+      </section>
+      <section class="import-panel" data-import-panel="pdf">
+        <label class="drop-zone" for="pdfFile"><svg><use href="#i-file"/></svg><strong>选择英文 PDF</strong><span>支持文本型或扫描型 PDF，最大 20MB</span><input id="pdfFile" type="file" accept="application/pdf"></label>
+      </section>
+      <section class="import-panel" data-import-panel="web">
+        <label for="articleUrl">英文文章网址</label>
+        <div class="url-field"><svg><use href="#i-link"/></svg><input id="articleUrl" type="url" placeholder="https://example.com/article"></div>
+        <p class="form-tip">粘贴公开网页链接，系统会抽取正文并过滤导航和广告。</p>
+      </section>
+      <div class="field-row">
+        <label>文章标题 <span>可选</span><input id="articleTitle" placeholder="留空则自动识别"></label>
+        <label>内容来源 <span>可选</span><input id="articleSource" placeholder="例如 BBC、Reddit"></label>
+      </div>
+      <footer class="dialog-actions">
+        <button class="button ghost" type="button" id="cancelImport">取消</button>
+        <button class="button primary" type="submit"><svg><use href="#i-spark"/></svg>保存并开始阅读</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="import-dialog exam-import-dialog" id="examImportDialog">
+    <form method="dialog" class="dialog-header">
+      <div><h2>导入正版剑雅资料</h2><p id="examImportLabel">选择你已合法获得的题目、音频和原文。</p></div>
+      <button class="icon-button" value="cancel" aria-label="关闭"><svg><use href="#i-x"/></svg></button>
+    </form>
+    <form id="examImportForm" class="import-form">
+      <div class="exam-import-notice"><svg><use href="#i-file"/></svg><p><strong>资料只保存在当前浏览器</strong><span>文件会进入本机 IndexedDB，不会上传；请勿导入或传播未获授权的副本。</span></p></div>
+      <div class="field-row">
+        <label>题目 / 答案文件 <span>PDF 或图片</span><input id="examPaperFile" type="file" accept="application/pdf,image/*"></label>
+        <label>音视频文件 <span>听力音频或口语视频</span><input id="examMediaFile" type="file" accept="audio/*,video/*"></label>
+      </div>
+      <label>听力原文或题目文本 <span>可选；粘贴后可送入逐句精听</span><textarea id="examTranscript" placeholder="Paste the transcript or task text that came with your legally obtained material..."></textarea></label>
+      <footer class="dialog-actions">
+        <button class="button ghost" type="button" id="cancelExamImport">取消</button>
+        <button class="button primary" type="submit"><svg><use href="#i-upload"/></svg>保存到本机资料库</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <dialog class="import-dialog transfer-dialog" id="transferDialog">
+    <form method="dialog" class="dialog-header">
+      <div><h2>把学习进度带到平板</h2><p>备份词汇、文章、笔记和练习记录，然后在另一台设备恢复。</p></div>
+      <button class="icon-button" value="cancel" aria-label="关闭"><svg><use href="#i-x"/></svg></button>
+    </form>
+    <div class="transfer-body">
+      <section class="transfer-option">
+        <span class="transfer-icon"><svg><use href="#i-download"/></svg></span>
+        <div><h3>在电脑导出</h3><p>下载一个 JSON 备份文件，再通过微信、网盘或 AirDrop 发到平板。</p></div>
+        <button class="button primary" id="exportStudyBackup" type="button">导出学习备份</button>
+      </section>
+      <section class="transfer-option">
+        <span class="transfer-icon"><svg><use href="#i-upload"/></svg></span>
+        <div><h3>在平板恢复</h3><p>选择刚才的备份文件。恢复会替换该浏览器当前的学习记录。</p></div>
+        <label class="button" for="studyBackupFile">选择备份文件</label>
+        <input id="studyBackupFile" type="file" accept="application/json,.json" hidden>
+      </section>
+      <div class="transfer-note"><strong>不会同步大型媒体文件</strong><span>剑雅 PDF、图片、音视频保存在各设备的浏览器中，需要在平板上单独导入。</span></div>
+    </div>
+  </dialog>
+
+  <div class="mobile-scrim" id="mobileScrim"></div>
+  <div class="toast" id="toast" role="status"><svg><use href="#i-check"/></svg><span></span></div>
+  <script src="data/zhongkao-vocab.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

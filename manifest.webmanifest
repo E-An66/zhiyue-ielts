@@ -1,0 +1,16 @@
+{
+  "name": "知阅 IELTS 英语学习",
+  "short_name": "知阅 IELTS",
+  "description": "雅思听说读写、词汇复习与学习记录工具",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f7f8f7",
+  "theme_color": "#f7f8f7",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
