@@ -1,4 +1,4 @@
-const CACHE_NAME = "zhiyue-ielts-v1";
+const CACHE_NAME = "zhiyue-ielts-v2";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const APP_SHELL = [
   "./app.js",
   "./manifest.webmanifest",
   "./data/zhongkao-vocab.js",
+  "./data/listening-777.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];

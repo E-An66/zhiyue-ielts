@@ -162,9 +162,29 @@
     </div>
   </dialog>
 
+  <dialog class="import-dialog vocab-import-dialog" id="vocabImportDialog">
+    <form method="dialog" class="dialog-header">
+      <div><h2>导入分类词表</h2><p>文件只保存在当前浏览器；导入后可立即发音、标记和复习。</p></div>
+      <button class="icon-button" value="cancel" aria-label="关闭"><svg><use href="#i-x"/></svg></button>
+    </form>
+    <form id="vocabImportForm" class="import-form">
+      <div class="field-row">
+        <label>放入哪个词库<select id="vocabImportSkill"><option value="listening">听力</option><option value="speaking">口语</option><option value="reading">阅读</option><option value="writing">写作</option></select></label>
+        <label>选择词表文件 <span>CSV、TSV 或 TXT</span><input id="vocabImportFile" type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain"></label>
+      </div>
+      <label>也可以直接粘贴 <span>每行：单词, 中文释义, 音标</span><textarea id="vocabImportText" placeholder="word,meaning,phonetic&#10;accommodation,住宿,/əˌkɒməˈdeɪʃn/&#10;figure out,弄清楚,/ˈfɪɡə aʊt/"></textarea></label>
+      <div class="vocab-format-note"><strong>可识别的表头</strong><span><code>word / meaning / phonetic</code> 或 <code>单词 / 释义 / 音标</code>；没有表头时默认按这个顺序读取。</span></div>
+      <footer class="dialog-actions">
+        <button class="button ghost" type="button" id="cancelVocabImport">取消</button>
+        <button class="button primary" type="submit"><svg><use href="#i-upload"/></svg>导入并打开词库</button>
+      </footer>
+    </form>
+  </dialog>
+
   <div class="mobile-scrim" id="mobileScrim"></div>
   <div class="toast" id="toast" role="status"><svg><use href="#i-check"/></svg><span></span></div>
   <script src="data/zhongkao-vocab.js"></script>
+  <script src="data/listening-777.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

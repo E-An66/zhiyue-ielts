@@ -9,6 +9,12 @@
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
   const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
   const escapeHtml = value => String(value ?? "").replace(/[&<>'"]/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]);
+  const VOCAB_SKILLS = {
+    listening: { label: "听力", icon: "headphones", hint: "辨音、拼写与场景词" },
+    speaking: { label: "口语", icon: "mic", hint: "主动表达与话题搭配" },
+    reading: { label: "阅读", icon: "book", hint: "文章语境与同义替换" },
+    writing: { label: "写作", icon: "pen", hint: "正式表达与高频搭配" }
+  };
 
   const articleSeeds = [
     {
@@ -131,11 +137,14 @@
   }
 
   function loadState() {
-    const fallback = { articles: articleSeeds, words: baseWords(), notes: {}, writingDrafts: {}, examLibrary: {}, intensiveNotes: {}, intensiveReviews: [], speechReports: [], reviewed: 67, streak: 4 };
+    const fallback = { articles: articleSeeds, words: baseWords(), vocabProgress: {}, notes: {}, writingDrafts: {}, examLibrary: {}, intensiveNotes: {}, intensiveReviews: [], speechReports: [], reviewed: 67, streak: 4 };
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!stored || !Array.isArray(stored.articles) || !Array.isArray(stored.words)) return fallback;
-      return Object.assign(fallback, stored);
+      const merged = Object.assign(fallback, stored);
+      merged.vocabProgress ||= {};
+      merged.words.forEach(word => { word.skill ||= "reading"; });
+      return merged;
     } catch (error) {
       return fallback;
     }
@@ -150,8 +159,12 @@
   let categoryFilter = "全部文章";
   let articleQuery = "";
   let vocabQuery = "";
+  let vocabSkill = "listening";
+  let vocabDay = "1";
   let reviewIndex = 0;
   let reviewRevealed = false;
+  let reviewQueue = [];
+  let reviewSkill = "listening";
   let listeningSection = "1";
   let listeningMaterialIndex = 0;
   let listeningMode = "exam";
@@ -399,25 +412,84 @@
     </section>`;
   }
 
+  function builtInListeningWords() {
+    return (window.LISTENING_777_VOCAB?.words || []).map((item, index) => ({
+      ...item,
+      id: `listening-777-${index}`,
+      source: "listening-777",
+      skill: "listening",
+      pos: item.word.includes(" ") ? "phrase" : "word",
+      exams: ["听力777", `Day ${item.day}`]
+    }));
+  }
+
+  function wordsForSkill(skill = vocabSkill) {
+    const custom = data.words.filter(item => (item.skill || "reading") === skill).map(item => ({ ...item, skill: item.skill || "reading", source: item.source || "custom" }));
+    return skill === "listening" ? [...builtInListeningWords(), ...custom] : custom;
+  }
+
+  function wordProgress(item) {
+    return data.vocabProgress?.[item.id] || { reviews: item.reviews || 0, status: item.status || "new", nextAt: item.nextAt || 0 };
+  }
+
   function filteredWords() {
     const query = vocabQuery.trim().toLowerCase();
-    return data.words.filter(item => !query || `${item.word} ${item.meaning} ${item.exams.join(" ")}`.toLowerCase().includes(query));
+    return wordsForSkill().filter(item => {
+      const inDay = vocabSkill !== "listening" || vocabDay === "all" || String(item.day || "") === vocabDay;
+      const searchable = `${item.word} ${item.meaning} ${(item.exams || []).join(" ")} ${item.topic || ""}`.toLowerCase();
+      return inDay && (!query || searchable.includes(query));
+    });
+  }
+
+  function nextReviewText(progress) {
+    if (progress.status === "mastered") return "已掌握";
+    if (!progress.nextAt || progress.nextAt <= Date.now()) return "现在";
+    const days = Math.ceil((progress.nextAt - Date.now()) / DAY);
+    return days < 1 ? "今天" : `${days} 天后`;
   }
 
   function wordTableMarkup() {
     const words = filteredWords();
-    if (!words.length) return `<tr><td colspan="6"><div class="empty-state">${icon("search")}<p>没有找到匹配的词汇</p></div></td></tr>`;
-    return words.map(item => `<tr><td class="word-cell"><strong>${escapeHtml(item.word)}</strong><span>${escapeHtml(item.phonetic)} · ${escapeHtml(item.pos)}</span></td><td>${escapeHtml(item.meaning)}</td><td><div class="tag-row">${item.exams.map(tag => `<span class="badge">${escapeHtml(tag)}</span>`).join("")}</div></td><td>${item.reviews || 0} 次</td><td>${item.reviews ? "3 天后" : "今天"}</td><td><button class="table-action" data-delete-word="${item.id}" aria-label="删除">${icon("trash")}</button></td></tr>`).join("");
+    if (!words.length) return `<tr><td colspan="5"><div class="empty-state">${icon("search")}<p>${vocabQuery ? "没有找到匹配的词汇" : `“${VOCAB_SKILLS[vocabSkill].label}”词库还是空的，点击上方导入词表`}</p></div></td></tr>`;
+    return words.map(item => {
+      const progress = wordProgress(item);
+      const source = item.source === "listening-777" ? `Day ${item.day} · ${item.topic}` : (item.exams || []).join(" · ") || "个人导入";
+      return `<tr><td class="word-cell"><div><strong>${escapeHtml(item.word)}</strong><button class="inline-speak" data-speak="${escapeHtml(item.word)}" aria-label="播放 ${escapeHtml(item.word)}">${icon("volume")}</button></div><span>${escapeHtml(item.phonetic || "点击扬声器听发音")} · ${escapeHtml(item.pos || "word")}</span></td><td>${escapeHtml(item.meaning)}</td><td>${escapeHtml(source)}</td><td><strong class="review-count">${progress.reviews || 0} 次</strong><span class="next-review">${nextReviewText(progress)}</span></td><td><div class="word-actions"><button class="mastery-button ${progress.status === "mastered" ? "active" : ""}" data-toggle-mastered="${item.id}" aria-label="${progress.status === "mastered" ? "标记为待复习" : "标记为已掌握"}">${icon("check")}</button>${item.source !== "listening-777" ? `<button class="table-action" data-delete-word="${item.id}" aria-label="删除">${icon("trash")}</button>` : ""}</div></td></tr>`;
+    }).join("");
+  }
+
+  function vocabularySkillTabs() {
+    return `<div class="vocab-skill-tabs" role="tablist">${Object.entries(VOCAB_SKILLS).map(([key, skill]) => {
+      const words = wordsForSkill(key);
+      const mastered = words.filter(item => wordProgress(item).status === "mastered").length;
+      return `<button class="${vocabSkill === key ? "active" : ""}" data-vocab-skill="${key}" role="tab" aria-selected="${vocabSkill === key}"><span>${icon(skill.icon)}</span><div><strong>${skill.label}</strong><small>${skill.hint}</small></div><b>${mastered}/${words.length}</b></button>`;
+    }).join("")}</div>`;
   }
 
   function renderVocabulary() {
-    const reviewed = data.words.filter(word => word.reviews > 0).length;
+    const allWords = wordsForSkill();
+    const started = allWords.filter(word => wordProgress(word).reviews > 0).length;
+    const mastered = allWords.filter(word => wordProgress(word).status === "mastered").length;
+    const due = allWords.filter(word => { const progress = wordProgress(word); return progress.status !== "mastered" && (!progress.nextAt || progress.nextAt <= Date.now()); }).length;
+    const pack = window.LISTENING_777_VOCAB;
+    const dayPicker = vocabSkill === "listening" && pack ? `<label class="day-filter">主题<select id="vocabDaySelect"><option value="all" ${vocabDay === "all" ? "selected" : ""}>全部 21 天</option>${pack.days.map(item => `<option value="${item.day}" ${vocabDay === String(item.day) ? "selected" : ""}>Day ${item.day} · ${escapeHtml(item.topic)}</option>`).join("")}</select></label>` : "";
     return `<section class="page vocab-page">
-      ${header("词汇库", "从真实阅读上下文沉淀的个人词汇资产。", `<button class="button primary" id="startReview">${icon("refresh")}开始复习</button>`)}
-      <div class="vocab-toolbar"><div class="search-field">${icon("search")}<input id="vocabSearch" value="${escapeHtml(vocabQuery)}" placeholder="搜索单词或释义"></div><div class="toolbar-actions"><button class="button">全部考试范围</button><button class="button" id="exportWords">导出词汇</button></div></div>
-      <section class="vocab-summary card"><div class="summary-stat"><span>累计词汇</span><strong>${data.words.length}</strong></div><div class="summary-stat"><span>今日新增</span><strong>10</strong></div><div class="summary-stat"><span>已开始复习</span><strong>${reviewed}</strong></div><div class="summary-stat"><span>熟练掌握</span><strong>${Math.max(1, Math.round(reviewed * .4))}</strong></div></section>
-      <section class="word-table-wrap card"><table class="word-table"><thead><tr><th>单词</th><th>中文释义</th><th>考试范围</th><th>复习次数</th><th>下次复习</th><th></th></tr></thead><tbody id="wordTableBody">${wordTableMarkup()}</tbody></table></section>
+      ${header("四科词汇库", "听、说、读、写分别积累，分别复习。", `<button class="button primary" id="startReview">${icon("refresh")}复习${VOCAB_SKILLS[vocabSkill].label}</button>`)}
+      ${vocabularySkillTabs()}
+      <div class="vocab-toolbar"><div class="search-field">${icon("search")}<input id="vocabSearch" value="${escapeHtml(vocabQuery)}" placeholder="搜索${VOCAB_SKILLS[vocabSkill].label}单词或释义"></div><div class="toolbar-actions">${dayPicker}<button class="button" id="openVocabImport">${icon("upload")}导入词表</button><button class="button" id="exportWords">${icon("download")}导出</button></div></div>
+      ${vocabSkill === "listening" ? `<p class="vocab-source-note">已内置你提供的“听力777”：${pack?.count || 0} 个不重复词条，按 21 个场景主题整理。点击单词旁的扬声器即可跟读。</p>` : ""}
+      <section class="vocab-summary card"><div class="summary-stat"><span>${VOCAB_SKILLS[vocabSkill].label}词汇</span><strong>${allWords.length}</strong></div><div class="summary-stat"><span>当前待复习</span><strong>${due}</strong></div><div class="summary-stat"><span>已开始复习</span><strong>${started}</strong></div><div class="summary-stat"><span>熟练掌握</span><strong>${mastered}</strong></div></section>
+      <section class="word-table-wrap card"><table class="word-table"><thead><tr><th>单词与发音</th><th>中文释义</th><th>来源 / 主题</th><th>复习进度</th><th>掌握</th></tr></thead><tbody id="wordTableBody">${wordTableMarkup()}</tbody></table></section>
     </section>`;
+  }
+
+  function prepareReviewQueue() {
+    reviewSkill = vocabSkill;
+    reviewQueue = wordsForSkill(reviewSkill)
+      .filter(item => vocabSkill !== "listening" || vocabDay === "all" || String(item.day || "") === vocabDay)
+      .filter(item => { const progress = wordProgress(item); return progress.status !== "mastered" && (!progress.nextAt || progress.nextAt <= Date.now()); })
+      .sort((a, b) => (wordProgress(a).reviews || 0) - (wordProgress(b).reviews || 0))
+      .slice(0, 10);
   }
 
   const listeningSections = {
@@ -965,13 +1037,23 @@
   }
 
   function renderReview() {
-    const queue = data.words.slice(0, 10);
-    if (reviewIndex >= queue.length) {
-      return `<section class="review-page"><div class="review-toolbar"><button class="icon-button" data-route="vocabulary">${icon("x")}</button><div></div><span></span></div><div class="review-stage"><div class="review-complete"><span class="complete-icon">${icon("check")}</span><h2>今天的复习已完成</h2><p>10 个词已经重新排入艾宾浩斯复习计划。</p><button class="button primary" data-route="analytics">查看学习分析</button></div></div></section>`;
+    if (!reviewQueue.length || reviewIndex >= reviewQueue.length) {
+      const message = reviewQueue.length ? `${reviewQueue.length} 个${VOCAB_SKILLS[reviewSkill].label}词已重新安排复习时间。` : `当前没有到期的${VOCAB_SKILLS[reviewSkill].label}词，可以返回词库选择其他分类。`;
+      return `<section class="review-page"><div class="review-toolbar"><button class="icon-button" data-route="vocabulary" aria-label="返回词汇库">${icon("x")}</button><div></div><span></span></div><div class="review-stage"><div class="review-complete"><span class="complete-icon">${icon("check")}</span><h2>${reviewQueue.length ? "本轮复习完成" : "今天已经清空"}</h2><p>${message}</p><button class="button primary" data-route="vocabulary">返回四科词汇库</button></div></div></section>`;
     }
-    const word = queue[reviewIndex];
-    return `<section class="review-page"><div class="review-toolbar"><button class="icon-button" data-route="vocabulary">${icon("x")}</button><div><div class="session-head"><span>${reviewIndex + 1} / ${queue.length}</span><span>英文回想</span></div><div class="session-track"><span style="width:${(reviewIndex + 1) / queue.length * 100}%"></span></div></div><button class="icon-button">${icon("settings")}</button></div>
-      <div class="review-stage"><article class="review-card card"><div class="review-card-head"><span class="badge">英文 → 中文</span><span>间隔复习</span></div><div class="flashcard"><p class="counterword">请回想这个表达的中文意思</p><h2>${escapeHtml(word.word)}</h2><div class="pronounce"><span>${escapeHtml(word.phonetic)}</span><button data-speak="${escapeHtml(word.word)}">${icon("volume")}</button></div>${reviewRevealed ? `<p class="meaning">${escapeHtml(word.meaning)}</p>` : ""}</div>${reviewRevealed ? `<p class="rating-prompt">这次回忆有多轻松？</p><div class="rating-grid"><button data-rating="again"><strong>再来</strong><span>10 分钟</span></button><button data-rating="hard"><strong>困难</strong><span>1 天</span></button><button data-rating="good"><strong>记得</strong><span>3 天</span></button><button data-rating="easy"><strong>熟练</strong><span>7 天</span></button></div>` : `<button class="button primary reveal-button" id="revealWord">显示答案</button>`}</article></div>
+    const word = reviewQueue[reviewIndex];
+    const mode = reviewIndex % 3;
+    const prompts = [
+      { badge: "中文 → 英文", tip: "先说出或拼出英文，再查看答案", question: `<h2 class="meaning-question">${escapeHtml(word.meaning)}</h2>` },
+      { badge: "听音 → 拼写", tip: "播放发音，不看答案写出单词", question: `<button class="audio-recall" data-speak="${escapeHtml(word.word)}" aria-label="播放待复习单词">${icon("volume")}<span>播放单词</span></button>` },
+      { badge: "英文 → 中文", tip: "回想中文意思，并跟读一遍", question: `<h2>${escapeHtml(word.word)}</h2>` }
+    ];
+    const prompt = prompts[mode];
+    const answer = mode === 2
+      ? `<p class="meaning">${escapeHtml(word.meaning)}</p><div class="pronounce"><span>${escapeHtml(word.phonetic || "跟读发音")}</span><button data-speak="${escapeHtml(word.word)}">${icon("volume")}</button></div>`
+      : `<div class="review-answer"><h2>${escapeHtml(word.word)}</h2><div class="pronounce"><span>${escapeHtml(word.phonetic || "跟读发音")}</span><button data-speak="${escapeHtml(word.word)}">${icon("volume")}</button></div></div>`;
+    return `<section class="review-page"><div class="review-toolbar"><button class="icon-button" data-route="vocabulary" aria-label="退出复习">${icon("x")}</button><div><div class="session-head"><span>${reviewIndex + 1} / ${reviewQueue.length}</span><span>${VOCAB_SKILLS[reviewSkill].label}主动回忆</span></div><div class="session-track"><span style="width:${(reviewIndex + 1) / reviewQueue.length * 100}%"></span></div></div><span></span></div>
+      <div class="review-stage"><article class="review-card card"><div class="review-card-head"><span class="badge">${prompt.badge}</span><span>间隔复习</span></div><div class="flashcard"><p class="counterword">${prompt.tip}</p>${prompt.question}${reviewRevealed ? answer : ""}</div>${reviewRevealed ? `<p class="rating-prompt">这次回忆有多轻松？</p><div class="rating-grid"><button data-rating="again"><strong>再来</strong><span>10 分钟</span></button><button data-rating="hard"><strong>困难</strong><span>1 天</span></button><button data-rating="good"><strong>记得</strong><span>3 天</span></button><button data-rating="easy"><strong>熟练</strong><span>7 天</span></button></div>` : `<button class="button primary reveal-button" id="revealWord">显示答案</button>`}</article></div>
     </section>`;
   }
 
@@ -1011,6 +1093,8 @@
     if (librarySearch) librarySearch.addEventListener("input", event => { articleQuery = event.target.value; $("#articleList").innerHTML = articleListMarkup(); });
     const vocabSearch = $("#vocabSearch");
     if (vocabSearch) vocabSearch.addEventListener("input", event => { vocabQuery = event.target.value; $("#wordTableBody").innerHTML = wordTableMarkup(); });
+    const vocabDaySelect = $("#vocabDaySelect");
+    if (vocabDaySelect) vocabDaySelect.addEventListener("change", event => { vocabDay = event.target.value; render(); });
     const writingDraft = $("#writingDraft");
     if (writingDraft) writingDraft.addEventListener("input", event => {
       const count = event.target.value.trim() ? event.target.value.trim().split(/\s+/).length : 0;
@@ -1035,7 +1119,7 @@
   function addWord(word) {
     if (hasWord(word)) { showToast(`“${word}” 已在词汇库中`); return; }
     const detail = getDetail(word);
-    data.words.unshift({ id: `word-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, word: detail.word, phonetic: detail.phonetic, pos: detail.pos, meaning: detail.meaning, exams: detail.exams, reviews: 0, addedAt: Date.now() });
+    data.words.unshift({ id: `word-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, word: detail.word, phonetic: detail.phonetic, pos: detail.pos, meaning: detail.meaning, exams: detail.exams, skill: "reading", source: "reading", reviews: 0, addedAt: Date.now() });
     save();
     showToast(`已将 “${detail.word}” 加入词汇库`);
   }
@@ -1128,7 +1212,10 @@
     if (filterButton) { categoryFilter = filterButton.dataset.filter; render(); return; }
 
     if (event.target.closest("#openImport")) { $("#importDialog").showModal(); return; }
-    if (event.target.closest("#startReview")) { reviewIndex = 0; reviewRevealed = false; setRoute("review"); return; }
+    const vocabSkillButton = event.target.closest("[data-vocab-skill]");
+    if (vocabSkillButton) { vocabSkill = vocabSkillButton.dataset.vocabSkill; vocabQuery = ""; if (vocabSkill === "listening" && vocabDay === "all") vocabDay = "1"; render(); return; }
+    if (event.target.closest("#openVocabImport")) { $("#vocabImportSkill").value = vocabSkill; $("#vocabImportDialog").showModal(); return; }
+    if (event.target.closest("#startReview")) { reviewIndex = 0; reviewRevealed = false; prepareReviewQueue(); setRoute("review"); return; }
     if (event.target.closest("#revealWord")) { reviewRevealed = true; render(); return; }
     const volumeButton = event.target.closest("[data-cambridge-volume]");
     if (volumeButton) { cambridgeVolume = volumeButton.dataset.cambridgeVolume; render(); return; }
@@ -1237,7 +1324,16 @@
     if (event.target.closest("#saveWriting")) { data.writingDrafts ||= {}; data.writingDrafts[writingTask] = $("#writingDraft").value; save(); showToast("写作草稿已保存到本机"); return; }
 
     const rating = event.target.closest("[data-rating]");
-    if (rating) { const word = data.words[reviewIndex]; if (word) word.reviews = (word.reviews || 0) + 1; data.reviewed += 1; save(); reviewIndex += 1; reviewRevealed = false; render(); return; }
+    if (rating) {
+      const word = reviewQueue[reviewIndex];
+      if (word) {
+        const previous = wordProgress(word);
+        const delay = { again: 10 * 60000, hard: DAY, good: 3 * DAY, easy: 7 * DAY }[rating.dataset.rating];
+        data.vocabProgress[word.id] = { reviews: (previous.reviews || 0) + 1, status: rating.dataset.rating === "easy" ? "mastered" : "learning", nextAt: Date.now() + delay };
+        data.reviewed += 1;
+      }
+      save(); reviewIndex += 1; reviewRevealed = false; render(); return;
+    }
 
     const browserSelection = window.getSelection()?.toString().trim();
     if (route === "reader" && browserSelection && event.target.closest(".article-body")) return;
@@ -1259,8 +1355,17 @@
 
     const speakButton = event.target.closest("[data-speak]");
     if (speakButton) { speak(speakButton.dataset.speak); return; }
+    const masteryButton = event.target.closest("[data-toggle-mastered]");
+    if (masteryButton) {
+      const id = masteryButton.dataset.toggleMastered;
+      const word = wordsForSkill().find(item => item.id === id);
+      const previous = word ? wordProgress(word) : { reviews: 0 };
+      const mastered = previous.status === "mastered";
+      data.vocabProgress[id] = { ...previous, status: mastered ? "learning" : "mastered", nextAt: mastered ? Date.now() : Date.now() + 7 * DAY };
+      save(); render(); showToast(mastered ? "已重新加入复习" : "已标记为掌握"); return;
+    }
     const deleteButton = event.target.closest("[data-delete-word]");
-    if (deleteButton) { data.words = data.words.filter(item => item.id !== deleteButton.dataset.deleteWord); save(); render(); showToast("词汇已移除"); return; }
+    if (deleteButton) { data.words = data.words.filter(item => item.id !== deleteButton.dataset.deleteWord); delete data.vocabProgress[deleteButton.dataset.deleteWord]; save(); render(); showToast("词汇已移除"); return; }
 
     if (event.target.closest("#toggleAI")) { $("#aiPanel")?.classList.toggle("open"); return; }
     if (event.target.closest("#generateNote")) { aiTab = "summary"; const panel = $("#aiPanel"); if (panel) { panel.outerHTML = aiPanelMarkup(currentArticle()); $("#aiPanel").classList.add("open"); } showToast("精读笔记已生成"); return; }
@@ -1269,12 +1374,87 @@
     if (event.target.closest("#exportWords")) { exportVocabulary(); return; }
   });
 
+  function parseVocabularyRows(text) {
+    const source = String(text || "").replace(/^\uFEFF/, "").trim();
+    if (!source) return [];
+    const firstLine = source.split(/\r?\n/, 1)[0];
+    const delimiter = firstLine.includes("\t") ? "\t" : firstLine.includes(",") ? "," : firstLine.includes("|") ? "|" : null;
+    let rows;
+    if (!delimiter) {
+      rows = source.split(/\r?\n/).map(line => {
+        const parts = line.trim().split(/\s{2,}/);
+        return parts.length > 1 ? parts : [line.trim()];
+      });
+    } else {
+      rows = [];
+      let row = [], field = "", quoted = false;
+      for (let index = 0; index < source.length; index += 1) {
+        const char = source[index];
+        if (char === '"' && quoted && source[index + 1] === '"') { field += '"'; index += 1; }
+        else if (char === '"') quoted = !quoted;
+        else if (char === delimiter && !quoted) { row.push(field.trim()); field = ""; }
+        else if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && source[index + 1] === "\n") index += 1;
+          row.push(field.trim()); if (row.some(Boolean)) rows.push(row); row = []; field = "";
+        } else field += char;
+      }
+      row.push(field.trim()); if (row.some(Boolean)) rows.push(row);
+    }
+    const cleanHeader = value => String(value || "").toLowerCase().replace(/[\s_-]/g, "");
+    const headers = (rows[0] || []).map(cleanHeader);
+    const findHeader = names => headers.findIndex(header => names.includes(header));
+    const indexes = {
+      word: findHeader(["word", "term", "expression", "单词", "词汇", "英文"]),
+      meaning: findHeader(["meaning", "definition", "translation", "释义", "中文", "翻译", "中文释义"]),
+      phonetic: findHeader(["phonetic", "pronunciation", "ipa", "音标", "读音"]),
+      pos: findHeader(["pos", "partofspeech", "词性"])
+    };
+    const hasHeader = indexes.word >= 0;
+    return rows.slice(hasHeader ? 1 : 0).map(columns => {
+      const word = String(columns[hasHeader ? indexes.word : 0] || "").trim();
+      const detail = getDetail(word);
+      return {
+        word,
+        meaning: String(columns[hasHeader && indexes.meaning >= 0 ? indexes.meaning : 1] || detail.meaning || "待补充释义").trim(),
+        phonetic: String(columns[hasHeader && indexes.phonetic >= 0 ? indexes.phonetic : 2] || detail.phonetic || "").trim(),
+        pos: String(columns[hasHeader && indexes.pos >= 0 ? indexes.pos : 3] || detail.pos || (word.includes(" ") ? "phrase" : "word")).trim()
+      };
+    }).filter(item => /[A-Za-z]/.test(item.word) && item.word.length <= 100);
+  }
+
+  function importVocabulary(text, skill) {
+    const parsed = parseVocabularyRows(text);
+    const existing = new Set(wordsForSkill(skill).map(item => item.word.trim().toLowerCase()));
+    let added = 0;
+    parsed.forEach((item, index) => {
+      const key = item.word.toLowerCase();
+      if (existing.has(key)) return;
+      existing.add(key);
+      data.words.push({
+        id: `import-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+        ...item,
+        skill,
+        source: "import",
+        exams: [`${VOCAB_SKILLS[skill].label}导入`],
+        reviews: 0,
+        addedAt: Date.now()
+      });
+      added += 1;
+    });
+    if (added) save();
+    return { added, total: parsed.length };
+  }
+
   function exportVocabulary() {
-    const rows = [["word", "phonetic", "meaning", "exams"], ...data.words.map(item => [item.word, item.phonetic, item.meaning, item.exams.join("|")])];
+    const words = wordsForSkill();
+    const rows = [["word", "meaning", "phonetic", "category", "topic", "reviews", "status"], ...words.map(item => {
+      const progress = wordProgress(item);
+      return [item.word, item.meaning, item.phonetic || "", VOCAB_SKILLS[vocabSkill].label, item.topic || "", progress.reviews || 0, progress.status || "new"];
+    })];
     const csv = rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(",")).join("\n");
     const link = document.createElement("a");
     link.href = URL.createObjectURL(new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" }));
-    link.download = "知阅词汇库.csv";
+    link.download = `知阅-${VOCAB_SKILLS[vocabSkill].label}词汇库.csv`;
     link.click();
     URL.revokeObjectURL(link.href);
     showToast("词汇表已导出");
@@ -1341,6 +1521,28 @@
   $("#articleText").addEventListener("input", event => $("#textCount").textContent = event.target.value.length);
   $("#cancelImport").addEventListener("click", () => $("#importDialog").close());
   $("#cancelExamImport").addEventListener("click", () => $("#examImportDialog").close());
+  $("#cancelVocabImport").addEventListener("click", () => $("#vocabImportDialog").close());
+  $("#vocabImportForm").addEventListener("submit", async event => {
+    event.preventDefault();
+    const skill = $("#vocabImportSkill").value;
+    const file = $("#vocabImportFile").files[0];
+    const pasted = $("#vocabImportText").value.trim();
+    if (!file && !pasted) return showToast("请选择词表文件，或先粘贴词汇内容");
+    try {
+      const content = [file ? await file.text() : "", pasted].filter(Boolean).join("\n");
+      const result = importVocabulary(content, skill);
+      if (!result.total) return showToast("没有识别到英文词汇，请检查文件格式");
+      vocabSkill = skill;
+      if (skill === "listening") vocabDay = "all";
+      vocabQuery = "";
+      $("#vocabImportDialog").close();
+      $("#vocabImportForm").reset();
+      showToast(result.added ? `成功导入 ${result.added} 个词，已跳过 ${result.total - result.added} 个重复项` : "词表中的单词已经存在，没有重复导入");
+      render();
+    } catch (error) {
+      showToast("词表读取失败，请改用 UTF-8 编码的 CSV、TSV 或 TXT");
+    }
+  });
   $("#examImportForm").addEventListener("submit", async event => {
     event.preventDefault();
     const target = examImportTarget || examSlot();

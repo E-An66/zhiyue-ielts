@@ -746,6 +746,43 @@ dialog { color: var(--ink); }
 .speech-insights ul { margin: 0; padding-left: 18px; color: #4f6067; font-size: 9px; line-height: 1.8; }
 .score-disclaimer { margin: 12px 0 0; color: var(--muted); font-size: 8px; }
 
+/* Four-skill vocabulary library */
+.vocab-skill-tabs { margin-bottom: 18px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: white; }
+.vocab-skill-tabs button { min-width: 0; min-height: 78px; padding: 13px 15px; border: 0; border-right: 1px solid var(--line); display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 10px; align-items: center; color: var(--ink); background: white; text-align: left; cursor: pointer; }
+.vocab-skill-tabs button:last-child { border-right: 0; }
+.vocab-skill-tabs button > span { width: 34px; height: 34px; border-radius: 7px; display: grid; place-items: center; color: var(--blue); background: var(--blue-soft); }
+.vocab-skill-tabs button svg { width: 16px; height: 16px; }
+.vocab-skill-tabs button div { min-width: 0; display: grid; gap: 4px; }
+.vocab-skill-tabs button strong { font-size: 12px; }
+.vocab-skill-tabs button small { overflow: hidden; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.vocab-skill-tabs button b { color: var(--muted); font-size: 9px; font-weight: 650; }
+.vocab-skill-tabs button.active { color: white; background: var(--blue); }
+.vocab-skill-tabs button.active > span { color: white; background: rgba(255,255,255,.14); }
+.vocab-skill-tabs button.active small, .vocab-skill-tabs button.active b { color: rgba(255,255,255,.72); }
+.day-filter { height: 40px; padding: 0 9px 0 11px; border: 1px solid var(--line); border-radius: 8px; display: flex; align-items: center; gap: 7px; color: var(--muted); background: white; font-size: 9px; white-space: nowrap; }
+.day-filter select { max-width: 190px; border: 0; outline: 0; color: var(--ink); background: white; font-size: 10px; }
+.vocab-source-note { margin: -3px 0 14px; color: var(--muted); font-size: 9px; line-height: 1.6; }
+.word-cell > div { display: flex; align-items: center; gap: 7px; }
+.inline-speak { width: 27px; height: 27px; flex: 0 0 auto; border: 0; border-radius: 6px; display: grid; place-items: center; color: var(--blue); background: var(--blue-soft); cursor: pointer; }
+.inline-speak svg { width: 13px; height: 13px; }
+.review-count, .next-review { display: block; }
+.review-count { font-size: 10px; }
+.next-review { margin-top: 4px; color: var(--muted); font-size: 9px; }
+.word-actions { display: flex; align-items: center; gap: 4px; }
+.mastery-button { width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 7px; display: grid; place-items: center; color: #98a2a6; background: white; cursor: pointer; }
+.mastery-button svg { width: 14px; }
+.mastery-button.active { color: white; border-color: var(--teal); background: var(--teal); }
+.meaning-question { max-width: 560px; margin-left: auto !important; margin-right: auto !important; font: 650 22px/1.55 system-ui, sans-serif !important; }
+.review-answer { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }
+.audio-recall { min-width: 150px; min-height: 92px; margin-top: 20px; padding: 15px 22px; border: 1px solid #cbdce4; border-radius: 8px; display: inline-grid; place-items: center; gap: 7px; color: var(--blue); background: #f7fafb; cursor: pointer; }
+.audio-recall svg { width: 26px; height: 26px; }
+.audio-recall span { font-size: 10px; font-weight: 700; }
+.vocab-import-dialog .import-form textarea { min-height: 155px; }
+.vocab-import-dialog select { width: 100%; height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 9px; outline: none; background: white; }
+.vocab-format-note { margin-top: 13px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 8px; display: grid; gap: 5px; color: var(--muted); background: #f8faf9; font-size: 9px; line-height: 1.55; }
+.vocab-format-note strong { color: var(--ink); font-size: 10px; }
+.vocab-format-note code { color: var(--blue); }
+
 .focus-exit { position: fixed; z-index: 80; right: 18px; top: 18px; height: 40px; padding: 0 14px; border: 1px solid #cbd7dc; border-radius: 10px; display: none; align-items: center; gap: 7px; color: var(--ink); background: rgba(255,255,255,.96); box-shadow: 0 8px 24px rgba(20,38,44,.12); cursor: pointer; }
 .focus-exit svg { width: 15px; }
 .focus-mode .sidebar { transform: translateX(-100%); }
@@ -863,4 +900,24 @@ dialog { color: var(--ink); }
   .transfer-body { padding-left: 18px; padding-right: 18px; }
   .transfer-option { grid-template-columns: 42px minmax(0, 1fr); }
   .transfer-option .button { grid-column: 1 / -1; width: 100%; }
+}
+
+@media (max-width: 930px) {
+  .vocab-skill-tabs { grid-template-columns: 1fr 1fr; }
+  .vocab-skill-tabs button:nth-child(2) { border-right: 0; }
+  .vocab-skill-tabs button:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .toolbar-actions { flex-wrap: wrap; }
+}
+
+@media (max-width: 620px) {
+  .vocab-skill-tabs button { min-height: 68px; padding: 10px; grid-template-columns: 30px minmax(0, 1fr); }
+  .vocab-skill-tabs button > span { width: 30px; height: 30px; }
+  .vocab-skill-tabs button b, .vocab-skill-tabs button small { display: none; }
+  .toolbar-actions .button { flex: 1; }
+  .day-filter { width: 100%; }
+  .day-filter select { max-width: none; min-width: 0; flex: 1; }
+  .word-table th:nth-child(5), .word-table td:nth-child(5) { display: table-cell; }
+  .word-table th:nth-child(5), .word-table td:nth-child(5) { width: 54px; padding-left: 8px; padding-right: 8px; }
+  .review-stage { padding-left: 0; padding-right: 0; }
+  .meaning-question { font-size: 18px !important; }
 }
