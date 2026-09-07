@@ -133,7 +133,7 @@
       ["bamboozle", "/bæmˈbuːzl/", "verb", "欺骗；使迷惑", ["IELTS", "TOEFL"], 2],
       ["intimidate", "/ɪnˈtɪmɪdeɪt/", "verb", "恐吓", ["IELTS", "CET-6"], 1],
       ["New York", "/nuː jɔːrk/", "noun", "纽约", ["Academic English"], 4]
-    ].map((item, index) => ({ id: `seed-${index}`, word: item[0], phonetic: item[1], pos: item[2], meaning: item[3], exams: item[4], reviews: item[5], addedAt: Date.now() - index * DAY }));
+    ].map((item, index) => ({ id: `seed-${index}`, word: item[0], phonetic: item[1], pos: item[2], meaning: item[3], exams: item[4], reviews: 0, skill: "reading", addedAt: Date.now() - index * DAY }));
   }
 
   function loadState() {
@@ -259,6 +259,7 @@
   }
 
   function setRoute(nextRoute) {
+    if (nextRoute !== route) practiceStudio.leave();
     if (nextRoute !== "speaking" && speakingTimer) { clearInterval(speakingTimer); speakingTimer = null; }
     if (nextRoute !== "speaking" && speechRecognition) { speechRecognition.stop(); speechRecognition = null; }
     if (nextRoute !== "intensive") cleanupPronunciationSession();
@@ -1058,9 +1059,10 @@
   }
 
   function render() {
-    const views = { study: renderStudy, cambridge: renderCambridge, library: renderLibrary, listening: renderListening, intensive: renderIntensiveHub, speaking: renderSpeaking, writing: renderWriting, reader: renderReader, vocabulary: renderVocabulary, analytics: renderAnalytics, review: renderReview };
+    const views = { study: learningCenter.home, plan: learningCenter.plan, practice: renderPracticeHub, studio: practiceStudio.render, cambridge: renderCambridge, library: renderLibrary, listening: renderListening, intensive: renderIntensiveHub, speaking: practiceStudio.oral, writing: renderWriting, reader: renderReader, vocabulary: learningCenter.library, analytics: learningCenter.plan, review: learningCenter.session };
     $("#app").innerHTML = (views[route] || renderStudy)();
     bindViewInputs();
+    if (route === "studio" || route === "speaking") practiceStudio.hydrate(route).catch(() => showToast("本机媒体读取失败，请重新导入"));
     if (route === "cambridge" || (route === "intensive" && intensiveSource === "cambridge")) hydrateExamAssets();
   }
 
@@ -1215,7 +1217,7 @@
     const vocabSkillButton = event.target.closest("[data-vocab-skill]");
     if (vocabSkillButton) { vocabSkill = vocabSkillButton.dataset.vocabSkill; vocabQuery = ""; if (vocabSkill === "listening" && vocabDay === "all") vocabDay = "1"; render(); return; }
     if (event.target.closest("#openVocabImport")) { $("#vocabImportSkill").value = vocabSkill; $("#vocabImportDialog").showModal(); return; }
-    if (event.target.closest("#startReview")) { reviewIndex = 0; reviewRevealed = false; prepareReviewQueue(); setRoute("review"); return; }
+    if (event.target.closest("#startReview")) { learningCenter.start("review", vocabSkill); return; }
     if (event.target.closest("#revealWord")) { reviewRevealed = true; render(); return; }
     const volumeButton = event.target.closest("[data-cambridge-volume]");
     if (volumeButton) { cambridgeVolume = volumeButton.dataset.cambridgeVolume; render(); return; }
@@ -1533,6 +1535,7 @@
       const result = importVocabulary(content, skill);
       if (!result.total) return showToast("没有识别到英文词汇，请检查文件格式");
       vocabSkill = skill;
+      learningCenter.select(skill);
       if (skill === "listening") vocabDay = "all";
       vocabQuery = "";
       $("#vocabImportDialog").close();
@@ -1600,5 +1603,14 @@
     navigator.serviceWorker.register("./service-worker.js").catch(() => {});
   }
 
+  function renderPracticeHub() {
+    return `<section class="page lc-page"><header class="lc-heading"><div><p class="lc-eyebrow">知阅 IELTS</p><h1>刷题与写作</h1><p>按训练目标选择资料</p></div></header><div class="lc-practice-links practice-directory">${[["cambridge","file","剑雅资料库","导入题目、原文与音频"],["listening","headphones","听力模拟练习","Section 1–4 示例练习"],["library","book","阅读文章库","阅读、选词与笔记"],["writing","pen","写作练习","Task 1 / Task 2 草稿"]].map(([r,i,t,d])=>`<button data-route="${r}">${icon(i)}<div><strong>${t}</strong><small>${d}</small></div>${icon("chevron")}</button>`).join("")}</div></section>`;
+  }
+  const learningCenter = window.createLearningCenter({ getData: () => data, save, wordsForSkill, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, detail: word => wordDetails[word.toLowerCase()], route: () => route });
+  const practiceStudio = window.createPracticeStudio({ getData: () => data, save, wordsForSkill, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, putAsset: putExamAsset, getAsset: getExamAsset, align: alignSpeechWords, speakingParts,
+    detail: word => { const known = wordDetails[word.toLowerCase()]; if (known) return known; const row = (window.ZHONGKAO_VOCAB || []).find(r => String(r[0]).toLowerCase() === word.toLowerCase()); return row ? { meaning: row[1], phonetic: row[2] } : null; },
+    listeningSources: () => Object.keys(listeningSections).flatMap(key => listeningMaterials(key).map((m, i) => ({ id: `sample:${key}:${i}`, title: m.title, source: "示例文本", segments: m.segments.map(s => ({ text: s[1] })) })))
+  });
+  setInterval(() => { if (route === "study" && !document.hidden && !document.querySelector("dialog[open]")) render(); }, 30000);
   render();
 })();

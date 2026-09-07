@@ -1,9 +1,13 @@
-const CACHE_NAME = "zhiyue-ielts-v2";
+const CACHE_NAME = "zhiyue-ielts-v3-learning";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./learning.css",
+  "./learning-center.js",
+  "./practice-studio.js",
+  "./vendor/fsrs-5.2.3.js",
   "./manifest.webmanifest",
   "./data/zhongkao-vocab.js",
   "./data/listening-777.js",
