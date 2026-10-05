@@ -259,6 +259,7 @@
   }
 
   function setRoute(nextRoute) {
+    if (nextRoute !== route) expressionCenter.leave();
     if (nextRoute !== route) practiceStudio.leave();
     if (nextRoute !== "speaking" && speakingTimer) { clearInterval(speakingTimer); speakingTimer = null; }
     if (nextRoute !== "speaking" && speechRecognition) { speechRecognition.stop(); speechRecognition = null; }
@@ -269,7 +270,7 @@
     document.body.classList.remove("focus-mode");
     $("#sidebar").classList.remove("open");
     $("#mobileScrim").classList.remove("show");
-    const activeRoute = route === "reader" ? "library" : route === "review" ? "vocabulary" : route;
+    const activeRoute = route === "expression-review" ? "expressions" : route === "reader" ? "library" : route === "review" ? "vocabulary" : route;
     $$(".nav-button[data-route]").forEach(button => button.classList.toggle("active", button.dataset.route === activeRoute));
     render();
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -1060,9 +1061,10 @@
   }
 
   function render() {
-    const views = { study: learningCenter.home, plan: learningCenter.plan, practice: renderPracticeHub, studio: practiceStudio.render, cambridge: renderCambridge, library: renderLibrary, listening: renderListening, intensive: renderIntensiveHub, speaking: practiceStudio.oral, writing: renderWriting, reader: renderReader, vocabulary: learningCenter.library, analytics: learningCenter.plan, review: learningCenter.session };
+    const views = { expressions: expressionCenter.library, "expression-review": expressionCenter.session, study: learningCenter.home, plan: learningCenter.plan, practice: renderPracticeHub, studio: practiceStudio.render, cambridge: renderCambridge, library: renderLibrary, listening: renderListening, intensive: renderIntensiveHub, speaking: practiceStudio.oral, writing: renderWriting, reader: renderReader, vocabulary: learningCenter.library, analytics: learningCenter.plan, review: learningCenter.session };
     $("#app").innerHTML = (views[route] || renderStudy)();
     bindViewInputs();
+    if (route === "expression-review") expressionCenter.hydrate().catch(() => showToast("本机录音读取失败"));
     if (route === "studio" || route === "speaking") practiceStudio.hydrate(route).catch(() => showToast("本机媒体读取失败，请重新导入"));
     if (route === "cambridge" || (route === "intensive" && intensiveSource === "cambridge")) hydrateExamAssets();
   }
@@ -1607,7 +1609,8 @@
   function renderPracticeHub() {
     return `<section class="page lc-page"><header class="lc-heading"><div><p class="lc-eyebrow">知阅 IELTS</p><h1>刷题与写作</h1><p>按训练目标选择资料</p></div></header><div class="lc-practice-links practice-directory">${[["cambridge","file","剑雅资料库","导入题目、原文与音频"],["listening","headphones","听力模拟练习","Section 1–4 示例练习"],["library","book","阅读文章库","阅读、选词与笔记"],["writing","pen","写作练习","Task 1 / Task 2 草稿"]].map(([r,i,t,d])=>`<button data-route="${r}">${icon(i)}<div><strong>${t}</strong><small>${d}</small></div>${icon("chevron")}</button>`).join("")}</div></section>`;
   }
-  const learningCenter = window.createLearningCenter({ getData: () => data, save, wordsForSkill, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, detail: word => wordDetails[word.toLowerCase()], route: () => route });
+  const expressionCenter = window.createExpressionCenter({ getData: () => data, save, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, putAsset: putExamAsset, getAsset: getExamAsset, route: () => route, openWords: key => { learningCenter.select(key); setRoute("vocabulary"); } });
+  const learningCenter = window.createLearningCenter({ expressions: expressionCenter, getData: () => data, save, wordsForSkill, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, detail: word => wordDetails[word.toLowerCase()], route: () => route });
   const practiceStudio = window.createPracticeStudio({ getData: () => data, save, wordsForSkill, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, putAsset: putExamAsset, getAsset: getExamAsset, align: alignSpeechWords, speakingParts,
     detail: word => { const known = wordDetails[word.toLowerCase()]; if (known) return known; const row = (window.ZHONGKAO_VOCAB || []).find(r => String(r[0]).toLowerCase() === word.toLowerCase()); return row ? { meaning: row[1], phonetic: row[2] } : null; },
     listeningSources: () => Object.keys(listeningSections).flatMap(key => listeningMaterials(key).map((m, i) => ({ id: `sample:${key}:${i}`, title: m.title, source: "示例文本", segments: m.segments.map(s => ({ text: s[1] })) })))
