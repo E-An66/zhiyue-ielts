@@ -426,6 +426,7 @@
 
   function wordsForSkill(skill = vocabSkill) {
     const custom = data.words.filter(item => (item.skill || "reading") === skill).map(item => ({ ...item, skill: item.skill || "reading", source: item.source || "custom" }));
+    if (skill === "reading") return [...(window.READING_NOTES?.words || []), ...custom];
     return skill === "listening" ? [...builtInListeningWords(), ...custom] : custom;
   }
 
