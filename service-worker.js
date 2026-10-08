@@ -1,4 +1,4 @@
-const CACHE_NAME = "zhiyue-ielts-v6-oct08-notes";
+const CACHE_NAME = "zhiyue-ielts-v7-expression-tabs";
 const APP_SHELL = [
   "./",
   "./index.html",

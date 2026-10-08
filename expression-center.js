@@ -49,7 +49,8 @@
     }
     function scope(e) { return (source === "all" || e.source === source) && `${e.left} ${e.right} ${e.meaning} ${e.source}`.toLowerCase().includes(query.toLowerCase()); }
     function filtered() {
-      return items().filter(e => scope(e) && (skill === "all" || status === "all" ||
+      return items().filter(e => scope(e) && (skill === "all" || status === "catalog" ||
+        status === "all" && (e.defaultSkills.includes(skill) || enabled(e, skill) || !!progress(e, skill)) ||
         status === "enabled" && enabled(e, skill) || status === "new" && enabled(e, skill) && !progress(e, skill) ||
         status === "due" && enabled(e, skill) && progress(e, skill)?.nextAt <= Date.now()));
     }
@@ -58,7 +59,7 @@
       return `<div class="ex-pair"><div><small>笔记表达 A</small><strong>${esc(e.left)}</strong>${audio(e.left)}</div><span aria-hidden="true">↔</span><div><small>笔记表达 B</small><strong>${esc(e.right)}</strong>${audio(e.right.replace(/\//g, "; "))}</div></div><p>${esc(e.meaning)}</p>${e.reference?.startsWith("https://")?`<p><a href="${esc(e.reference)}" target="_blank" rel="noopener noreferrer">词义核对来源</a></p>`:""}<p class="ex-caution">${esc(e.note)}</p>${e.practiceLeft ? `<div class="ex-example"><small>${esc(e.practiceLabel)}</small><p>${esc(e.practiceLeft)} ↔ ${esc(e.practiceRight)}</p></div>` : ""}`;
     }
     function rows() {
-      return filtered().map(e => `<article class="ex-row"><div class="ex-row-head"><span>${esc(e.source)} · ${esc(e.relation)}</span><button class="icon-button" data-ex-edit="${esc(e.id)}" aria-label="编辑表达" title="编辑表达">${icon("pen")}</button></div><div class="ex-row-pair"><strong>${esc(e.left)}</strong><span>↔</span><strong>${esc(e.right)}</strong></div><p>${esc(e.meaning)}</p><div class="ex-enables">${Object.entries(names).map(([k,name]) => {const p=progress(e,k);return `<label><input type="checkbox" data-ex-enable="${esc(e.id)}" data-skill="${k}" ${enabled(e,k)?"checked":""}>${name}<small>${!enabled(e,k)?"未启用":!p?"未学":interval(p.nextAt)}</small></label>`;}).join("")}</div><details><summary>语境与发音</summary><small>${esc(e.provenance)}</small>${pair(e)}</details></article>`).join("") || `<div class="empty-state"><p>没有符合条件的表达</p></div>`;
+      return filtered().map(e => `<article class="ex-row"><div class="ex-row-head"><span>${esc(e.source)} · ${esc(e.relation)}</span><button class="icon-button" data-ex-edit="${esc(e.id)}" aria-label="编辑表达" title="编辑表达">${icon("pen")}</button></div><div class="ex-row-pair"><strong>${esc(e.left)}</strong><span>↔</span><strong>${esc(e.right)}</strong></div><p>${esc(e.meaning)}</p><div class="ex-enables">${Object.entries(names).map(([k,name]) => {const p=progress(e,k);return `<label><input type="checkbox" data-ex-enable="${esc(e.id)}" data-skill="${k}" ${enabled(e,k)?"checked":""}>${name}<small>${!enabled(e,k)?"未启用":!p?"未学":interval(p.nextAt)}</small></label>`;}).join("")}</div><details><summary>语境与发音</summary><small>${esc(e.provenance)}</small>${pair(e)}</details></article>`).join("") || `<div class="empty-state"><p>${skill!=="all"&&status==="all"&&source==="all"&&!query?`${names[skill]}还没有表达资料`:"没有符合筛选条件的表达"}</p>${skill!=="all"?button("catalog","从全部资料选择"):""}</div>`;
     }
     function actions() {
       if (skill === "all") return `<span>${items().length} 组共享表达</span>`;
@@ -66,7 +67,7 @@
       return `<div class="lc-actions"><button class="button primary" data-ex-start="new" data-skill="${skill}" ${!n?"disabled":""}>${icon("plus")}新学 ${n} 组</button><button class="button" data-ex-start="review" data-skill="${skill}" ${!due?"disabled":""}>${icon("refresh")}复习 ${due} 组</button></div><span>已启用 ${c.all.length} 组 · 今日新学 ${c.learned} / ${data().expressionPlan[skill]}</span>`;
     }
     function library() {
-      return `<section class="page lc-page ex-page">${head("同义表达库",skill === "all" ? "全部科目 · 共享资料" : `${names[skill]} · ${["listening","reading"].includes(skill)?"识别与理解":"主动表达"}`,`${button("add",icon("plus")+"添加表达")}${button("export",icon("download")+"导出资料")}`)}<div class="lc-tabs" role="tablist" aria-label="表达科目">${[["all","全部"],...Object.entries(names)].map(([k,n])=>`<button role="tab" aria-selected="${skill===k}" class="${skill===k?"active":""}" data-ex-skill="${k}">${n}</button>`).join("")}</div>${modes(skill)}${resume(skill)}<div class="lc-library-actions" id="exActions">${actions()}</div><div class="lc-filters"><input id="exSearch" type="search" value="${esc(query)}" placeholder="搜索表达、含义或来源" aria-label="搜索表达"><select id="exSource" aria-label="文章来源"><option value="all">全部来源</option>${[...new Set(items().map(e=>e.source))].map(s=>`<option value="${esc(s)}" ${source===s?"selected":""}>${esc(s)}</option>`).join("")}</select><select id="exStatus" aria-label="表达状态" ${skill==="all"?"disabled":""}>${[["all","全部资料"],["enabled","已启用"],["new","未学"],["due","到期复习"]].map(([k,n])=>`<option value="${k}" ${status===k?"selected":""}>${n}</option>`).join("")}</select></div><div id="exRows">${rows()}</div><div id="exEditorHost"></div></section>`;
+      return `<section class="page lc-page ex-page">${head("同义表达库",skill === "all" ? "全部科目 · 共享资料" : `${names[skill]} · ${["listening","reading"].includes(skill)?"识别与理解":"主动表达"}`,`${button("add",icon("plus")+"添加表达")}${button("export",icon("download")+"导出资料")}`)}<div class="lc-tabs" role="tablist" aria-label="表达科目">${[["all","全部"],...Object.entries(names)].map(([k,n])=>`<button role="tab" aria-selected="${skill===k}" class="${skill===k?"active":""}" data-ex-skill="${k}">${n}</button>`).join("")}</div>${modes(skill)}${resume(skill)}<div class="lc-library-actions" id="exActions">${actions()}</div><div class="lc-filters"><input id="exSearch" type="search" value="${esc(query)}" placeholder="搜索表达、含义或来源" aria-label="搜索表达"><select id="exSource" aria-label="文章来源"><option value="all">全部来源</option>${[...new Set(items().map(e=>e.source))].map(s=>`<option value="${esc(s)}" ${source===s?"selected":""}>${esc(s)}</option>`).join("")}</select><select id="exStatus" aria-label="表达状态" ${skill==="all"?"disabled":""}>${[["all",skill==="all"?"全部资料":"本科资料"],["catalog","跨科全部资料"],["enabled","已启用"],["new","未学"],["due","到期复习"]].map(([k,n])=>`<option value="${k}" ${status===k?"selected":""}>${n}</option>`).join("")}</select></div><div id="exRows">${rows()}</div><div id="exEditorHost"></div></section>`;
     }
     function refreshList() { document.querySelector("#exRows").innerHTML=rows(); document.querySelector("#exActions").innerHTML=actions(); }
     function resume(k) {
@@ -170,6 +171,7 @@
       if(el.dataset.exEdit)return editor(el.dataset.exEdit);
       const action=el.dataset.ex,s=sessionData();
       if(action==="home")return navigate("study");if(action==="library")return open(active);
+      if(action==="catalog"){source="all";query="";status="catalog";return navigate("expressions");}
       if(action==="add")return editor();if(action==="cancel")return document.querySelector("#exEditor").close();
       if(action==="next"&&s){s.phase="recall";save();return navigate("expression-review");}
       if(action==="reveal"&&s){s.revealed=true;save();leave();return navigate("expression-review");}
