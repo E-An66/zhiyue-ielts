@@ -1,4 +1,4 @@
-const CACHE_NAME = "zhiyue-ielts-v5-expressions";
+const CACHE_NAME = "zhiyue-ielts-v6-oct08-notes";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +8,8 @@ const APP_SHELL = [
   "./learning-center.js",
   "./expression-center.js",
   "./data/expressions.js",
+  "./data/notes-oct08.js",
+  "./data/expressions-oct08.js",
   "./practice-studio.js",
   "./vendor/fsrs-5.2.3.js",
   "./manifest.webmanifest",

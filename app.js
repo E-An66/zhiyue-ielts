@@ -428,7 +428,21 @@
   function wordsForSkill(skill = vocabSkill) {
     const custom = data.words.filter(item => (item.skill || "reading") === skill).map(item => ({ ...item, skill: item.skill || "reading", source: item.source || "custom" }));
     if (skill === "reading") return [...(window.READING_NOTES?.words || []), ...custom];
-    return skill === "listening" ? [...builtInListeningWords(), ...custom] : custom;
+    if (skill !== "listening") return custom;
+    const base = [...builtInListeningWords(), ...custom];
+    const normalize = s => s.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, " ");
+    const recent = [], used = new Set();
+    for (const note of (window.LISTENING_NOTES?.words || [])) {
+      const names = [note.word, ...(note.answers || [])].map(normalize);
+      const existing = base.find(w => names.includes(normalize(w.word)));
+      if (existing) {
+        used.add(existing.id);
+        recent.push({ ...existing, ...note, id: existing.id, day: existing.day, source: existing.source,
+          answers: [...new Set([...(note.answers || []), ...(existing.answers || []), existing.word])],
+          reviews: existing.reviews || 0 });
+      } else recent.push(note);
+    }
+    return [...recent, ...base.filter(w => !used.has(w.id))];
   }
 
   function wordProgress(item) {
