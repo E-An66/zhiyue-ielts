@@ -912,7 +912,8 @@ dialog { color: var(--ink); }
 @media (max-width: 620px) {
   .vocab-skill-tabs button { min-height: 68px; padding: 10px; grid-template-columns: 30px minmax(0, 1fr); }
   .vocab-skill-tabs button > span { width: 30px; height: 30px; }
-  .vocab-skill-tabs button b, .vocab-skill-tabs button small { display: none; }
+  .vocab-skill-tabs button b { display: block; }
+  .vocab-skill-tabs button small { display: none; }
   .toolbar-actions .button { flex: 1; }
   .day-filter { width: 100%; }
   .day-filter select { max-width: none; min-width: 0; flex: 1; }

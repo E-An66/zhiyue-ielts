@@ -1616,9 +1616,6 @@
     percentEl.textContent = percent;
   }, { passive: true });
 
-  if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
-  }
 
   function renderPracticeHub() {
     return `<section class="page lc-page"><header class="lc-heading"><div><p class="lc-eyebrow">知阅 IELTS</p><h1>刷题与写作</h1><p>按训练目标选择资料</p></div></header><div class="lc-practice-links practice-directory">${[["cambridge","file","剑雅资料库","导入题目、原文与音频"],["listening","headphones","听力模拟练习","Section 1–4 示例练习"],["library","book","阅读文章库","阅读、选词与笔记"],["writing","pen","写作练习","Task 1 / Task 2 草稿"]].map(([r,i,t,d])=>`<button data-route="${r}">${icon(i)}<div><strong>${t}</strong><small>${d}</small></div>${icon("chevron")}</button>`).join("")}</div></section>`;

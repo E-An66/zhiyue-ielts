@@ -240,6 +240,11 @@
   .lc-practice-links { grid-template-columns: 1fr; gap: 0; }
   .lc-tabs button { padding: 10px 4px; gap: 5px; font-size: 13px; }
   .lc-tabs small { display: none; }
+  .lc-tabs[aria-label="词汇科目"] { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); width: 100%; }
+  .lc-tabs[aria-label="词汇科目"] button { display: flex; flex-direction: column; min-width: 0; min-height: 64px; gap: 6px; font-size: 15px; }
+  .lc-tabs[aria-label="词汇科目"] button small { display: block; font-size: 11px; }
+  .lc-tabs[aria-label="词汇科目"] button svg { display: none; }
+  .lc-page input:not([type="checkbox"]), .lc-page select { font-size: 16px; }
   .lc-filters { flex-wrap: wrap; gap: 8px; }
   .lc-filters input { flex-basis: 100%; }
   .lc-filters select { min-width: 0; flex: 1; width: 50%; }
@@ -264,3 +269,8 @@
   .st-recorder > span { flex-basis: 100%; }
 }
 @media (max-width: 360px) { .lc-decks { grid-template-columns: 1fr; } }
+.sidebar { overflow-y: auto; }
+.sidebar-bottom { flex-shrink: 0; }
+.app-version { display: grid; gap: 4px; padding: 0 12px 8px; color: #66747a; font-size: 11px; overflow-wrap: anywhere; }
+.update-banner { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 16px; border-top: 1px solid #dce3e6; background: #f1faf5; }
+.update-banner[hidden] { display: none; }
