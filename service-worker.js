@@ -1,4 +1,4 @@
-const BUILD = "20261009-mobile1";
+const BUILD = "20261009-batch1";
 const CACHE_NAME = `zhiyue-ielts-shell-${BUILD}`;
 const APP_SHELL = [
   "./update-client.js",
