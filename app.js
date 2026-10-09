@@ -1119,6 +1119,7 @@
     $("#app").innerHTML = (views[route] || renderStudy)();
     bindViewInputs();
     if (route === "expression-review") expressionCenter.hydrate().catch(() => showToast("本机录音读取失败"));
+    learningCenter.hydrate();
     if (route === "studio" || route === "speaking") practiceStudio.hydrate(route).catch(() => showToast("文件暂时无法读取，请联网后重试"));
     if (route === "cambridge" || (route === "intensive" && intensiveSource === "cambridge")) hydrateExamAssets();
   }

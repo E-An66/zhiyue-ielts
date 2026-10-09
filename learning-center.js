@@ -9,6 +9,7 @@
     const scheduler = FSRS.fsrs({ request_retention: .9, enable_fuzz: false, enable_short_term: true, maximum_interval: 365 });
     let skill = "listening", filter = "all", query = "", day = "all", article = "all", page = 0, answer = "", checked = false, correct = false;
     let listeningBank = "all", answerTopic = "all", answerSource = "all";
+    let lastAutoPronunciation = "";
     const data = () => getData();
     data().learningPlan ||= { listening: 10, speaking: 5, reading: 5, writing: 5 };
     data().learningBatchSizes ||= {};
@@ -177,6 +178,17 @@
       toast("已放弃本组，已完成的记录已保留，可重新选择范围");
     }
     function sessionWord(s) { return wordsForSkill(s.skill).find(w=>w.id===s.ids[s.index]); }
+    function hydrate() {
+      const s=data().learningSession;
+      if(api.route()!=="review"||!s){lastAutoPronunciation="";return;}
+      if(data().learningAutoPronounce===false||document.hidden)return;
+      const w=sessionWord(s);if(!w)return;
+      const direction=s.skill==="listening"&&(w.trainingMode==="audio"||progress(w).reviews%2===1)?"audio":s.skill==="reading"?"meaning":"spelling";
+      if(s.phase!=="intro"&&!checked&&direction==="spelling")return;
+      const key=JSON.stringify([s.skill,s.kind,s.ids,s.index,s.phase,checked,w.word]);
+      if(key===lastAutoPronunciation)return;
+      lastAutoPronunciation=key;speak(w.word);
+    }
     function session() {
       const s=data().learningSession;
       if(!s) return `<section class="page lc-page">${head("本组完成","下一次复习已根据回忆表现安排")}${calendar()}<div class="lc-complete">${icon("check")}<h2>休息一下，再继续</h2><div class="lc-actions">${btn("home","返回今日背词",true)}${btn("library","查看词库")}</div></div></section>`;
@@ -185,7 +197,7 @@
       const revealed=intro||checked;
       const choices=scheduler.repeat(cardFor(w),new Date());
       const context=w.example||api.detail(w.word)?.example||"";
-      return `<section class="page lc-page lc-session">${head(`${skills[s.skill][0]} · ${s.kind==="new"?"新学":"复习"}`,`${intro?"听读认识":"主动回忆"} · ${s.index+1} / ${s.ids.length}`,btn("home",`${icon("back")}稍后继续`)+`<button type="button" class="button" data-lc="abandon" data-skill="${s.skill}">${icon("x")}放弃本组</button>`)}<progress max="${s.ids.length}" value="${s.index}"></progress><article class="lc-flashcard"><div class="lc-section-head"><span>${intro?"认识单词":direction==="audio"?"听音拼写":direction==="meaning"?"英文想中文":"中文想英文"}</span><span>${esc(w.topic||"")}</span></div>
+      return `<section class="page lc-page lc-session">${head(`${skills[s.skill][0]} · ${s.kind==="new"?"新学":"复习"}`,`${intro?"听读认识":"主动回忆"} · ${s.index+1} / ${s.ids.length}`,btn("home",`${icon("back")}稍后继续`)+`<button type="button" class="button" data-lc="abandon" data-skill="${s.skill}">${icon("x")}放弃本组</button>`)}<label class="lc-auto-pronounce"><input id="lcAutoPronounce" type="checkbox" ${data().learningAutoPronounce!==false?"checked":""}>自动发音</label><progress max="${s.ids.length}" value="${s.index}"></progress><article class="lc-flashcard"><div class="lc-section-head"><span>${intro?"认识单词":direction==="audio"?"听音拼写":direction==="meaning"?"英文想中文":"中文想英文"}</span><span>${esc(w.topic||"")}</span></div>
         ${intro?`<h2>${esc(w.word)}</h2><p class="lc-phonetic">${esc(w.phonetic||"")}</p><p class="lc-definition">${esc(w.meaning)}</p>`:direction==="audio"?`<button class="lc-audio" data-speak="${esc(w.word)}" aria-label="播放待学单词">${icon("volume")}</button>`:`<h2 class="${direction!=="meaning"?"lc-chinese":""}">${esc(direction==="meaning"?w.word:w.meaning)}</h2>`}
         ${intro?`<button class="button" data-speak="${esc(w.word)}">${icon("volume")}听发音</button>${context?`<blockquote>${esc(context)}</blockquote>`:""}${btn("intro-next",s.index+1===s.ids.length?"开始回想测试":"下一个",true)}`:`<form id="lcAnswerForm"><label>${direction==="meaning"?"回想中文意思":"写出英文"}<input id="lcAnswer" value="${esc(answer)}" autocomplete="off" autocapitalize="off" spellcheck="false" ${checked?"readonly":""} placeholder="${direction==="meaning"?"可输入或在心里回想":"Type the word"}"></label>${!checked?`<div class="lc-actions"><button class="button primary" type="submit">${direction==="meaning"?"查看释义":"检查答案"}</button><button class="button" type="button" data-lc="forgot">想不起来</button></div>`:""}</form>`}
         ${revealed&&w.answerSources?.length?answerMetadata(w):""}${!intro&&checked?`<div class="lc-answer ${correct?"correct":"incorrect"}"><strong>${esc(w.word)}</strong><p>${esc(w.meaning)}</p>${context?`<p class="lc-note">${esc(context)}</p>`:""}<button class="icon-button" data-speak="${esc(w.word)}" aria-label="听答案发音">${icon("volume")}</button><small>${direction==="meaning"?"按自己的回想结果选择":correct?"拼写正确":"先看清拼写，再听读一遍"}</small></div><div class="lc-ratings">${[[1,"忘记"],[2,"模糊"],[3,"记得"],[4,"轻松"]].map(([r,t])=>`<button data-lc-rate="${r}" ${!correct&&direction!=="meaning"&&r>1?"disabled":""}><strong>${t}</strong><small>${interval(choices[r].card.due)}</small></button>`).join("")}</div>`:""}</article></section>`;
@@ -220,6 +232,12 @@
     });
     document.addEventListener("input",e=>{if(e.target.id==="lcSearch"){query=e.target.value;page=0;document.querySelector("#lcRows").innerHTML=rows();}if(e.target.id==="lcAnswer")answer=e.target.value;});
     document.addEventListener("change",e=>{
+      if(e.target.id==="lcAutoPronounce"){
+        data().learningAutoPronounce=e.target.checked;save();
+        if(e.target.checked){lastAutoPronunciation="";hydrate();}
+        else if("speechSynthesis" in window)window.speechSynthesis.cancel();
+        return;
+      }
       if(e.target.matches("[data-lc-home-scope]")){
         const key=e.target.dataset.lcHomeScope,value=e.target.value;skill=key;
         listeningBank="all";day="all";article="all";answerSource="all";answerTopic="all";
@@ -247,6 +265,6 @@
       if(e.target.id==="lcAnswerForm"){e.preventDefault();answer=document.querySelector("#lcAnswer").value;const w=sessionWord(data().learningSession);correct=[w.word,...(w.answers||[])].some(value=>answer.normalize("NFKC").trim().toLowerCase().replace(/\s+/g," ")===value.normalize("NFKC").trim().toLowerCase().replace(/\s+/g," "));checked=true;navigate("review");}
       if(e.target.id==="lcPlanForm"){e.preventDefault();const form=new FormData(e.target);for(const k of Object.keys(skills))data().learningPlan[k]=Math.max(0,Math.min(100,Math.floor(Number(form.get(k))||0)));api.expressions.savePlan(form);save();toast("每日新学计划已保存");navigate("study");}
     });
-    return {home,library,session,plan,counts,progress,start,select:key=>{listeningBank="all";skill=key;day="all";article="all";filter="all";query="";page=0;},interval};
+    return {home,library,session,hydrate,plan,counts,progress,start,select:key=>{listeningBank="all";skill=key;day="all";article="all";filter="all";query="";page=0;},interval};
   };
 })();
