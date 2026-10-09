@@ -442,7 +442,22 @@
           reviews: existing.reviews || 0 });
       } else recent.push(note);
     }
-    return [...recent, ...base.filter(w => !used.has(w.id))];
+    const combined = [...recent, ...base.filter(w => !used.has(w.id))];
+    for (const seed of (window.LISTENING_ANSWER_BANK?.words || [])) {
+      const names = [seed.word, ...(seed.answers || [])].map(normalize);
+      const index = combined.findIndex(w => names.includes(normalize(w.word)));
+      if (index < 0) {
+        combined.push({ ...seed, topic: seed.answerTopic });
+      } else {
+        const existing = combined[index];
+        combined[index] = { ...existing, ...seed, id: existing.id, source: existing.source, day: existing.day,
+          phonetic: normalize(existing.word) === normalize(seed.word) ? existing.phonetic || "" : "", topic: existing.topic || seed.answerTopic,
+          example: [...new Set([seed.example, existing.example].filter(Boolean))].join("\n"),
+          answers: [...new Set([...(existing.answers || []), ...(seed.answers || []), existing.word])],
+          reviews: existing.reviews || 0 };
+      }
+    }
+    return combined;
   }
 
   function wordProgress(item) {

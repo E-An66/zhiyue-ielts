@@ -44,8 +44,8 @@
     }
     const button = (action, label, disabled = false) => `<button type="button" class="button" data-ex="${action}" ${disabled ? "disabled" : ""}>${label}</button>`;
     function open(k = "all") { skill = k; source = "all"; status = "all"; query = ""; navigate("expressions"); }
-    function modes(k, expression = true) {
-      return `<div class="ex-modes" role="tablist" aria-label="学习内容"><button role="tab" aria-selected="${!expression}" data-ex-words="${k === "all" ? "reading" : k}">单词</button><button role="tab" aria-selected="${expression}" data-ex-open="${k}">同义表达</button></div>`;
+    function modes(k, expression = true, answers = false) {
+      return `<div class="ex-modes" role="tablist" aria-label="学习内容"><button role="tab" aria-selected="${!expression&&!answers}" data-ex-words="${k === "all" ? "reading" : k}">单词</button>${k === "listening"?`<button role="tab" aria-selected="${answers}" data-lc="answers">答案词</button>`:""}<button role="tab" aria-selected="${expression}" data-ex-open="${k}">同义表达</button></div>`;
     }
     function scope(e) { return (source === "all" || e.source === source) && `${e.left} ${e.right} ${e.meaning} ${e.source}`.toLowerCase().includes(query.toLowerCase()); }
     function filtered() {

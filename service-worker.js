@@ -1,4 +1,4 @@
-const BUILD = "20261009-batch1";
+const BUILD = "20261009-answers1";
 const CACHE_NAME = `zhiyue-ielts-shell-${BUILD}`;
 const APP_SHELL = [
   "./update-client.js",
@@ -10,6 +10,7 @@ const APP_SHELL = [
   "./expression-center.js",
   "./data/expressions.js",
   "./data/notes-oct08.js",
+  "./data/listening-answers.js",
   "./data/expressions-oct08.js",
   "./practice-studio.js",
   "./vendor/fsrs-5.2.3.js",
