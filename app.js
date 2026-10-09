@@ -151,6 +151,7 @@
   }
 
   let data = loadState();
+  let studyCloud = null;
   let route = "study";
   let currentArticleId = "secret-codewords";
   let selectedWord = "Buffalo";
@@ -198,7 +199,7 @@
   let deferredInstallPrompt = null;
   let toastTimer;
 
-  function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+  function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); studyCloud?.changed(); }
   function examSlot(volume = cambridgeVolume, test = cambridgeTest, skill = cambridgeSkill) { return `cambridge-${volume}-test-${test}-${skill}`; }
   function examLabel(slot = examSlot()) {
     const match = slot.match(/^cambridge-(\d+)-test-(\d+)-(\w+)$/);
@@ -216,7 +217,10 @@
       request.onerror = () => reject(request.error);
     });
   }
-  async function putExamAsset(key, file) {
+  async function putExamAsset(key, file, cloudCopy = false) {
+    data.assetVersions ||= {};
+    if (!cloudCopy) data.assetVersions[key] = crypto.randomUUID();
+    const version = data.assetVersions[key] || "legacy";
     const db = await openExamDb();
     await new Promise((resolve, reject) => {
       const transaction = db.transaction(EXAM_STORE, "readwrite");
@@ -225,8 +229,13 @@
       transaction.onerror = () => reject(transaction.error);
     });
     db.close();
+    localStorage.setItem(`zhiyue-asset-version:${key}`, version);
+    if (!cloudCopy) {
+      save();
+      studyCloud?.upload(key, file, version).catch(() => showToast("文件已保存在本机，联网后重试上传"));
+    }
   }
-  async function getExamAsset(key) {
+  async function getLocalExamAsset(key) {
     const db = await openExamDb();
     const result = await new Promise((resolve, reject) => {
       const request = db.transaction(EXAM_STORE, "readonly").objectStore(EXAM_STORE).get(key);
@@ -235,6 +244,22 @@
     });
     db.close();
     return result;
+  }
+  async function getExamAsset(key) {
+    const local = await getLocalExamAsset(key);
+    const version = data.assetVersions?.[key] || "legacy";
+    if (local && (localStorage.getItem(`zhiyue-asset-version:${key}`) || "legacy") === version) return local;
+    const remote = await studyCloud?.download(key);
+    if (remote) await putExamAsset(key, remote, true);
+    return remote || null;
+  }
+  async function localAssetKeys() {
+    const db = await openExamDb();
+    const keys = await new Promise((resolve, reject) => {
+      const request = db.transaction(EXAM_STORE, "readonly").objectStore(EXAM_STORE).getAllKeys();
+      request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error);
+    });
+    db.close(); return keys;
   }
   function releaseExamUrls() { examObjectUrls.forEach(url => URL.revokeObjectURL(url)); examObjectUrls = []; }
   function currentArticle() { return data.articles.find(article => article.id === currentArticleId) || data.articles[0]; }
@@ -1017,9 +1042,9 @@
     const meta = data.examLibrary?.[slot];
     const readyCount = Object.keys(data.examLibrary || {}).filter(key => key.startsWith(`cambridge-${cambridgeVolume}-`)).length;
     const matrix = ["1", "2", "3", "4"].map(test => `<div class="exam-matrix-row"><strong>Test ${test}</strong>${cambridgeSkills.map(item => { const key = examSlot(cambridgeVolume, test, item.id); const ready = Boolean(data.examLibrary?.[key]); return `<button class="${ready ? "ready" : ""} ${cambridgeTest === test && cambridgeSkill === item.id ? "selected" : ""}" data-exam-cell="${test}|${item.id}"><span>${ready ? icon("check") : icon("upload")}</span>${item.label}</button>`; }).join("")}</div>`).join("");
-    const assetPanel = meta ? `<div class="asset-status-grid"><div><span>${icon("file")}</span><p><strong>题目文件</strong><small>${escapeHtml(meta.paperName || "未导入")}</small></p></div><div><span>${icon("headphones")}</span><p><strong>音视频</strong><small>${escapeHtml(meta.mediaName || "未导入")}</small></p></div><div><span>${icon("note")}</span><p><strong>文本 / 原文</strong><small>${meta.transcript ? `${meta.transcript.trim().split(/\s+/).length} words` : "未导入"}</small></p></div></div><div class="local-assets"><div id="examPaperHost" class="asset-host"></div><div id="examMediaHost" class="asset-host"></div>${meta.transcript ? `<details class="owned-transcript"><summary>查看已导入文本</summary><p>${escapeHtml(meta.transcript)}</p></details>` : ""}</div><div class="exam-primary-actions"><button class="button" id="openExamImport">${icon("refresh")}更新本机资料</button>${cambridgeSkill === "listening" && meta.transcript ? `<button class="button primary" id="sendExamToIntensive">${icon("target")}送入精听听写</button>` : ""}</div>` : `<div class="copyright-lock"><span>${icon("file")}</span><div><h3>此槽位尚未导入资料</h3><p>剑雅试题、答案和音频受版权保护。请从正版书或 Cambridge One 获取后，导入到当前浏览器。</p></div><button class="button primary" id="openExamImport">${icon("upload")}导入我拥有的资料</button></div>`;
+    const assetPanel = meta ? `<div class="asset-status-grid"><div><span>${icon("file")}</span><p><strong>题目文件</strong><small>${escapeHtml(meta.paperName || "未导入")}</small></p></div><div><span>${icon("headphones")}</span><p><strong>音视频</strong><small>${escapeHtml(meta.mediaName || "未导入")}</small></p></div><div><span>${icon("note")}</span><p><strong>文本 / 原文</strong><small>${meta.transcript ? `${meta.transcript.trim().split(/\s+/).length} words` : "未导入"}</small></p></div></div><div class="local-assets"><div id="examPaperHost" class="asset-host"></div><div id="examMediaHost" class="asset-host"></div>${meta.transcript ? `<details class="owned-transcript"><summary>查看已导入文本</summary><p>${escapeHtml(meta.transcript)}</p></details>` : ""}</div><div class="exam-primary-actions"><button class="button" id="openExamImport">${icon("refresh")}更新资料</button>${cambridgeSkill === "listening" && meta.transcript ? `<button class="button primary" id="sendExamToIntensive">${icon("target")}送入精听听写</button>` : ""}</div>` : `<div class="copyright-lock"><span>${icon("file")}</span><div><h3>此槽位尚未导入资料</h3><p>剑雅试题、答案和音频受版权保护。请从正版书或 Cambridge One 获取后，导入到私人账号。</p></div><button class="button primary" id="openExamImport">${icon("upload")}导入我拥有的资料</button></div>`;
     return `<section class="page exam-library-page">${header("剑雅真题资料库", "剑雅 14–21 · Test 1–4 · 听说读写本地管理", `<a class="button" href="https://shop.cambridge.org/english/exam/ielts" target="_blank" rel="noreferrer">Cambridge 官方入口</a>`)}
-      <div class="copyright-banner"><span>${icon("file")}</span><div><strong>目录完整，内容按版权状态加载</strong><p>这里提供选择、导入和训练工具，不会从网络复制盗版真题。你导入的文件只保存在本机浏览器。</p></div></div>
+      <div class="copyright-banner"><span>${icon("file")}</span><div><strong>目录完整，内容按版权状态加载</strong><p>这里提供选择、导入和训练工具，不会从网络复制盗版真题。你导入的文件保存在本机，并同步到私人账号。</p></div></div>
       <section class="exam-filters card"><div><label>选择册数</label><div class="volume-selector">${cambridgeVolumes.map(item => `<button class="${cambridgeVolume === item.number ? "active" : ""}" data-cambridge-volume="${item.number}"><strong>剑 ${item.number}</strong><span>${item.year}</span></button>`).join("")}</div></div><div class="test-skill-row"><div><label>选择套题</label><div class="test-selector">${["1", "2", "3", "4"].map(test => `<button class="${cambridgeTest === test ? "active" : ""}" data-cambridge-test="${test}">Test ${test}</button>`).join("")}</div></div><div><label>选择科目</label><div class="skill-selector">${cambridgeSkills.map(item => `<button class="${cambridgeSkill === item.id ? "active" : ""}" data-cambridge-skill="${item.id}"><strong>${item.label}</strong><span>${item.hint}</span></button>`).join("")}</div></div></div></section>
       <div class="exam-workspace"><main class="exam-detail card"><div class="practice-kicker"><span class="badge blue">剑雅 ${currentVolume.number} · ${currentVolume.year}</span><span>本册已导入 ${readyCount} / 16 个科目槽位</span></div><h2>Test ${cambridgeTest} · ${skill.label}</h2><p>${skill.hint}。选择题目文件、音视频和文本后即可在本机集中训练。</p>${assetPanel}</main><aside class="practice-aside"><section class="card tip-card"><h3>官方公开样题</h3><p>IELTS 官网提供可合法使用的 Academic Listening、Reading、Writing 和 Speaking 样题。</p><a class="button" href="https://ielts.org/take-a-test/preparation-resources/sample-test-questions/academic-test" target="_blank" rel="noreferrer">打开官方样题</a></section><section class="card tip-card"><h3>最新版本</h3><p>剑雅 21 于 2026 年 7 月出版；每册包含 4 套完整试卷，配套数字资源由 Cambridge One 提供。</p></section></aside></div>
       <section class="exam-matrix card"><div><h2>剑雅 ${cambridgeVolume} 完整目录</h2><p>绿色表示已在本机导入；点击任一格直接切换。</p></div>${matrix}</section></section>`;
@@ -1094,7 +1119,7 @@
     $("#app").innerHTML = (views[route] || renderStudy)();
     bindViewInputs();
     if (route === "expression-review") expressionCenter.hydrate().catch(() => showToast("本机录音读取失败"));
-    if (route === "studio" || route === "speaking") practiceStudio.hydrate(route).catch(() => showToast("本机媒体读取失败，请重新导入"));
+    if (route === "studio" || route === "speaking") practiceStudio.hydrate(route).catch(() => showToast("文件暂时无法读取，请联网后重试"));
     if (route === "cambridge" || (route === "intensive" && intensiveSource === "cambridge")) hydrateExamAssets();
   }
 
@@ -1118,7 +1143,7 @@
         mediaHost.replaceChildren(player);
       } else if (mediaHost) mediaHost.textContent = "未导入原始音频，可使用浏览器朗读备份。";
     } catch (error) {
-      [$("#examPaperHost"), $("#examMediaHost"), $("#intensiveOriginalAudio")].filter(Boolean).forEach(host => { host.textContent = "本机文件读取失败，请重新导入。"; });
+      [$("#examPaperHost"), $("#examMediaHost"), $("#intensiveOriginalAudio")].filter(Boolean).forEach(host => { host.textContent = "文件暂时无法读取，请联网后重试。"; });
     }
   }
 
@@ -1261,7 +1286,7 @@
     if (examCell) { [cambridgeTest, cambridgeSkill] = examCell.dataset.examCell.split("|"); render(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     if (event.target.closest("#openExamImport")) {
       examImportTarget = examSlot();
-      $("#examImportLabel").textContent = `${examLabel(examImportTarget)} · 文件只保存在当前浏览器`;
+      $("#examImportLabel").textContent = `${examLabel(examImportTarget)} · 文件保存到本机，并加入私人账号同步队列`;
       $("#examImportForm").reset();
       $("#examTranscript").value = data.examLibrary?.[examImportTarget]?.transcript || "";
       $("#examImportDialog").showModal();
@@ -1511,9 +1536,10 @@
       const restored = parsed?.data || parsed;
       if (!restored || !Array.isArray(restored.articles) || !Array.isArray(restored.words)) throw new Error("格式不正确");
       if (!window.confirm(`将恢复 ${restored.words.length} 个词和 ${restored.articles.length} 篇文章，并替换平板当前记录。是否继续？`)) return;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
-      showToast("恢复成功，正在重新载入");
-      setTimeout(() => window.location.reload(), 700);
+      data = Object.assign(data, restored);
+      save();
+      showToast("恢复成功，已加入账号同步队列");
+      render();
     } catch (error) {
       showToast("无法读取备份，请选择“知阅学习备份”JSON 文件");
     } finally {
@@ -1643,4 +1669,13 @@
   });
   setInterval(() => { if (route === "study" && !document.hidden && !document.querySelector("dialog[open]")) render(); }, 30000);
   render();
+  studyCloud = window.createStudyCloud({
+    getData: () => data,
+    apply: state => { data = Object.assign(loadState(), state); localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); render(); },
+    toast: showToast,
+    refresh: render,
+    localAsset: getLocalExamAsset,
+    assetKeys: localAssetKeys,
+    busy: () => !["study", "vocabulary", "expressions", "plan", "practice", "library"].includes(route) || !!document.querySelector("dialog[open]:not(.cloud-dialog)") || ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)
+  });
 })();

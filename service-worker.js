@@ -1,6 +1,11 @@
-const BUILD = "20261009-answers1";
+const BUILD = "20261009-cloud1";
 const CACHE_NAME = `zhiyue-ielts-shell-${BUILD}`;
 const APP_SHELL = [
+  "./cloud/account.css",
+  "./cloud/config.js",
+  "./cloud/sync-model.js",
+  "./cloud/client.js",
+  "./vendor/supabase-2.117.3.js",
   "./update-client.js",
   "./index.html",
   "./styles.css",
@@ -8,16 +13,11 @@ const APP_SHELL = [
   "./learning.css",
   "./learning-center.js",
   "./expression-center.js",
-  "./data/expressions.js",
-  "./data/notes-oct08.js",
-  "./data/listening-answers.js",
-  "./data/expressions-oct08.js",
+  "./cloud/catalogue.js",
   "./practice-studio.js",
   "./vendor/fsrs-5.2.3.js",
   "./manifest.webmanifest",
   "./data/zhongkao-vocab.js",
-  "./data/listening-777.js",
-  "./data/reading-notes.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];

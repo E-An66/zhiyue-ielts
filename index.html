@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <meta name="app-build" content="20261009-answers1">
+  <meta name="app-build" content="20261009-cloud1">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#f7f8f7">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -12,8 +12,9 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png" type="image/png">
   <link rel="apple-touch-icon" href="icons/icon-192.png">
-  <link rel="stylesheet" href="styles.css?v=20261009-answers1">
-  <link rel="stylesheet" href="learning.css?v=20261009-answers1">
+  <link rel="stylesheet" href="styles.css?v=20261009-cloud1">
+  <link rel="stylesheet" href="learning.css?v=20261009-cloud1">
+  <link rel="stylesheet" href="cloud/account.css?v=20261009-cloud1">
 </head>
 <body>
   <svg class="svg-sprite" aria-hidden="true">
@@ -69,7 +70,7 @@
       </nav>
       <div class="sidebar-bottom">
         <button class="nav-button" id="checkUpdate"><svg><use href="#i-refresh"/></svg><span>检查更新</span></button>
-        <div class="app-version"><span id="appBuild">版本 20261009-answers1</span><span id="updateStatus" role="status"></span></div>
+        <div class="app-version"><span id="appBuild">版本 20261009-cloud1</span><span id="updateStatus" role="status"></span></div>
         <button class="nav-button" id="installApp"><svg><use href="#i-download"/></svg><span>安装到设备</span></button>
         <button class="nav-button" id="deviceTransfer"><svg><use href="#i-tablet"/></svg><span>设备迁移</span></button>
         <button class="nav-button" id="focusToggle"><svg><use href="#i-target"/></svg><span>专注模式</span></button>
@@ -131,7 +132,7 @@
       <button class="icon-button" value="cancel" aria-label="关闭"><svg><use href="#i-x"/></svg></button>
     </form>
     <form id="examImportForm" class="import-form">
-      <div class="exam-import-notice"><svg><use href="#i-file"/></svg><p><strong>资料只保存在当前浏览器</strong><span>文件会进入本机 IndexedDB，不会上传；请勿导入或传播未获授权的副本。</span></p></div>
+      <div class="exam-import-notice"><svg><use href="#i-file"/></svg><p><strong>资料保存到私人账号</strong><span>文件先保存在本机，再上传至私人空间；单文件上限 50MB，请仅导入获授权资料。</span></p></div>
       <div class="field-row">
         <label>题目 / 答案文件 <span>PDF 或图片</span><input id="examPaperFile" type="file" accept="application/pdf,image/*"></label>
         <label>音视频文件 <span>听力音频或口语视频</span><input id="examMediaFile" type="file" accept="audio/*,video/*"></label>
@@ -139,7 +140,7 @@
       <label>听力原文或题目文本 <span>可选；粘贴后可送入逐句精听</span><textarea id="examTranscript" placeholder="Paste the transcript or task text that came with your legally obtained material..."></textarea></label>
       <footer class="dialog-actions">
         <button class="button ghost" type="button" id="cancelExamImport">取消</button>
-        <button class="button primary" type="submit"><svg><use href="#i-upload"/></svg>保存到本机资料库</button>
+        <button class="button primary" type="submit"><svg><use href="#i-upload"/></svg>保存到私人资料库</button>
       </footer>
     </form>
   </dialog>
@@ -161,13 +162,13 @@
         <label class="button" for="studyBackupFile">选择备份文件</label>
         <input id="studyBackupFile" type="file" accept="application/json,.json" hidden>
       </section>
-      <div class="transfer-note"><strong>不会同步大型媒体文件</strong><span>剑雅 PDF、图片、音视频保存在各设备的浏览器中，需要在平板上单独导入。</span></div>
+      <div class="transfer-note"><strong>文件同步额度</strong><span>文件自动加入私人同步队列，单文件最多 50MB；超限文件保留本机副本。JSON 备份仍不包含媒体。</span></div>
     </div>
   </dialog>
 
   <dialog class="import-dialog vocab-import-dialog" id="vocabImportDialog">
     <form method="dialog" class="dialog-header">
-      <div><h2>导入分类词表</h2><p>文件只保存在当前浏览器；导入后可立即发音、标记和复习。</p></div>
+      <div><h2>导入分类词表</h2><p>文件保存到本机，并加入私人账号同步队列；导入后可立即发音、标记和复习。</p></div>
       <button class="icon-button" value="cancel" aria-label="关闭"><svg><use href="#i-x"/></svg></button>
     </form>
     <form id="vocabImportForm" class="import-form">
@@ -186,18 +187,17 @@
 
   <div class="mobile-scrim" id="mobileScrim"></div>
   <div class="toast" id="toast" role="status"><svg><use href="#i-check"/></svg><span></span></div>
-  <script src="update-client.js?v=20261009-answers1"></script>
-  <script src="data/zhongkao-vocab.js?v=20261009-answers1"></script>
-  <script src="data/listening-777.js?v=20261009-answers1"></script>
-  <script src="data/reading-notes.js?v=20261009-answers1"></script>
-  <script src="data/notes-oct08.js?v=20261009-answers1"></script>
-  <script src="data/listening-answers.js?v=20261009-answers1"></script>
-  <script src="data/expressions.js?v=20261009-answers1"></script>
-  <script src="data/expressions-oct08.js?v=20261009-answers1"></script>
-  <script src="vendor/fsrs-5.2.3.js?v=20261009-answers1"></script>
-  <script src="learning-center.js?v=20261009-answers1"></script>
-  <script src="expression-center.js?v=20261009-answers1"></script>
-  <script src="practice-studio.js?v=20261009-answers1"></script>
-  <script src="app.js?v=20261009-answers1"></script>
+  <script src="update-client.js?v=20261009-cloud1"></script>
+  <script src="data/zhongkao-vocab.js?v=20261009-cloud1"></script>
+  <script src="cloud/catalogue.js?v=20261009-cloud1"></script>
+  <script src="vendor/fsrs-5.2.3.js?v=20261009-cloud1"></script>
+  <script src="learning-center.js?v=20261009-cloud1"></script>
+  <script src="expression-center.js?v=20261009-cloud1"></script>
+  <script src="practice-studio.js?v=20261009-cloud1"></script>
+  <script src="vendor/supabase-2.117.3.js?v=20261009-cloud1"></script>
+  <script src="cloud/config.js?v=20261009-cloud1"></script>
+  <script src="cloud/sync-model.js?v=20261009-cloud1"></script>
+  <script src="cloud/client.js?v=20261009-cloud1"></script>
+  <script src="app.js?v=20261009-cloud1"></script>
 </body>
 </html>

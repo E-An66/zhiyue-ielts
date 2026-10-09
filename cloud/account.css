@@ -1,0 +1,11 @@
+.cloud-status-button{border:0;background:transparent;color:inherit;text-align:left;padding:12px;width:100%;cursor:pointer}
+.cloud-mobile-button{display:none}
+.cloud-dialog{width:min(420px,calc(100vw - 32px));border:1px solid #d5dce1;border-radius:8px;padding:24px;color:#162b36;background:#fff}
+.cloud-dialog::backdrop{background:rgba(12,28,38,.65)}
+.cloud-dialog h2{font-size:22px;margin:0 0 20px}
+.cloud-dialog label{display:block;margin:16px 0;font-size:14px}
+.cloud-dialog input{display:block;width:100%;box-sizing:border-box;margin-top:8px;padding:12px;border:1px solid #bdcbd4;border-radius:4px;font-size:16px}
+.cloud-dialog .button{margin:8px 8px 0 0}
+.cloud-locked .app-shell,.cloud-locked #app{visibility:hidden;pointer-events:none}
+.cloud-locked>:not(.cloud-dialog):not(script):not(style){pointer-events:none}
+@media(max-width:800px){.cloud-mobile-button{display:block;position:fixed;top:14px;right:14px;z-index:80;border:1px solid #b8c9d4;border-radius:6px;background:#fff;color:#174f73;padding:10px;max-width:calc(100vw - 85px);font-size:12px;box-shadow:0 2px 8px #0001}}
