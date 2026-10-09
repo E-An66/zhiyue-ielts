@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  const BUILD = "20261009-scopefix1";
+  const BUILD = "20261009-answerstart1";
   const button = document.querySelector("#checkUpdate");
   const label = document.querySelector("#updateStatus");
   const banner = document.querySelector("#updateBanner");
