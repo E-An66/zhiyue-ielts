@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  const BUILD = "20261009-abandon1";
+  const BUILD = "20261009-scope1";
   const button = document.querySelector("#checkUpdate");
   const label = document.querySelector("#updateStatus");
   const banner = document.querySelector("#updateBanner");

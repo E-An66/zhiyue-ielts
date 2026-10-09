@@ -16,6 +16,20 @@
     data().learningSessions ||= {};
     if(data().learningSession)data().learningSessions[data().learningSession.skill]=data().learningSession;
     function save(){if(data().learningSession)data().learningSessions[data().learningSession.skill]=data().learningSession;saveState();}
+    function scopeState(){return {bank:listeningBank,day,article,answerSource,answerTopic};}
+    function rememberScope(){data().learningScopes ||= {};data().learningScopes[skill]=scopeState();save();}
+    function restoreScope(key){
+      const scope=data().learningScopes?.[key]||{};
+      listeningBank=scope.bank||"all";day=scope.day||"all";article=scope.article||"all";
+      answerSource=scope.answerSource||"all";answerTopic=scope.answerTopic||"all";
+    }
+    function homeScope(key){
+      if(!["listening","reading"].includes(key))return "";
+      const scope=data().learningScopes?.[key]||{};
+      let selected=key==="reading"?(scope.article||"all"):scope.bank==="answers"?(scope.answerTopic&&scope.answerTopic!=="all"?`scene:${scope.answerTopic}`:scope.answerSource==="personal"?"personal":"answers"):scope.day&&scope.day!=="all"?`day:${scope.day}`:"all";
+      const options=key==="reading"?[["all","全部阅读词汇"],...(window.READING_NOTES?.articles||[]).map(a=>[a.id,a.title])]:[["all","全部听力词汇"],["answers","只背答案词（不含场景扩展）"],["personal","只背我的考点词"],["day:notes","近期听力积累"],...(window.LISTENING_ANSWER_BANK?.categories||[]).map(c=>[`scene:${c.id}`,`答案词 · ${c.title}`]),...(window.LISTENING_777_VOCAB?.days||[]).map(d=>[`day:${d.day}`,`777 · Day ${d.day} · ${d.topic}`])];
+      return `<label class="lc-scope-picker">背词范围<select data-lc-home-scope="${key}" aria-label="${skills[key][0]}背词范围">${options.map(([v,t])=>`<option value="${esc(String(v))}" ${selected===String(v)?"selected":""}>${esc(t)}</option>`).join("")}</select></label>`;
+    }
     function progress(word) {
       const old = data().vocabProgress[word.id] || {};
       const started = !!(old.card || old.learnedAt || old.reviews || word.reviews || old.status === "mastered");
@@ -67,7 +81,7 @@
       return `<section class="page lc-page">${head("今天，从单词开始",new Date().toLocaleDateString("zh-CN",{month:"long",day:"numeric",weekday:"long"}),btn("plan",`${icon("settings")}学习计划`))}
         <div class="lc-dayline"><div><span>今日新学</span><strong>${learned}<small> 词</small></strong></div><div><span>今日已复习</span><strong>${reviewed}<small> 词</small></strong></div><div><span>到期待复习</span><strong>${due}<small> 词</small></strong></div></div>
         ${api.expressions.summary()}${ongoing.map(s=>`<div class="lc-resume"><span>${skills[s.skill][0]} · ${s.kind==="new"?"新学":"复习"}进度已保存</span><button class="button primary" data-lc="resume" data-session-skill="${s.skill}">继续上次学习</button></div>`).join("")}
-        <div class="lc-decks">${Object.entries(skills).map(([k,[name,i]])=>{const c=counts(k); return `<article class="lc-deck" data-skill="${k}"><div class="lc-deck-title">${icon(i)}<h2>${name}词汇</h2><button class="icon-button" data-lc-open="${k}" title="打开${name}词库" aria-label="打开${name}词库">${icon("chevron")}</button></div><div class="lc-deck-numbers"><div><b>${c.remaining}</b><span>今日可新学</span></div><div><b>${c.due.length}</b><span>到期复习</span></div></div><progress max="${Math.max(1,c.words.length)}" value="${c.started}"></progress><p class="lc-deck-caption">已学 ${c.started} / ${c.words.length} · 今日新学 ${c.learned} / ${c.quota}</p>${batchSettings(k)}<div class="lc-actions"><button class="button primary" data-lc-start="new" data-skill="${k}" ${!c.remaining&&!data().learningSessions[k]?"disabled":""}>${icon("plus")}${data().learningSessions[k]?"继续本组":`新学 ${Math.min(batchSize(k),c.remaining)}`}</button><button class="button" data-lc-start="review" data-skill="${k}" ${!c.due.length?"disabled":""}>${icon("refresh")}复习</button>${!c.words.length?`<button class="text-button" data-lc-import="${k}">导入词表</button>`:""}</div>${k==="listening"?`<div class="lc-answer-entry"><button class="text-button" data-lc="answers">${icon("headphones")}答案词 ${wordsForSkill("listening").filter(w=>w.answerSources?.length).length}${icon("chevron")}</button></div>`:""}${api.expressions.homeBlock(k)}</article>`;}).join("")}</div>
+        <div class="lc-decks">${Object.entries(skills).map(([k,[name,i]])=>{const c=counts(k); return `<article class="lc-deck" data-skill="${k}"><div class="lc-deck-title">${icon(i)}<h2>${name}词汇</h2><button class="icon-button" data-lc-open="${k}" title="打开${name}词库" aria-label="打开${name}词库">${icon("chevron")}</button></div><div class="lc-deck-numbers"><div><b>${c.remaining}</b><span>今日可新学</span></div><div><b>${c.due.length}</b><span>到期复习</span></div></div><progress max="${Math.max(1,c.words.length)}" value="${c.started}"></progress><p class="lc-deck-caption">已学 ${c.started} / ${c.words.length} · 今日新学 ${c.learned} / ${c.quota}</p>${batchSettings(k)}${homeScope(k)}<div class="lc-actions"><button class="button primary" data-lc-start="new" data-skill="${k}" ${!c.remaining&&!data().learningSessions[k]?"disabled":""}>${icon("plus")}${data().learningSessions[k]?"继续本组":`新学 ${Math.min(batchSize(k),c.remaining)}`}</button><button class="button" data-lc-start="review" data-skill="${k}" ${!c.due.length?"disabled":""}>${icon("refresh")}复习</button>${!c.words.length?`<button class="text-button" data-lc-import="${k}">导入词表</button>`:""}</div>${k==="listening"?`<div class="lc-answer-entry"><button class="text-button" data-lc="answers">${icon("headphones")}答案词 ${wordsForSkill("listening").filter(w=>w.answerSources?.length).length}${icon("chevron")}</button></div>`:""}${api.expressions.homeBlock(k)}</article>`;}).join("")}</div>
         <section class="lc-band"><div class="lc-section-head"><h2>未来 7 天的复习</h2><span>根据当前记录，随学习更新</span></div>${calendar()}</section>
         <section class="lc-band"><div class="lc-section-head"><h2>运用今天学到的词</h2></div><div class="lc-practice-links">${[["studio","headphones","精听精读"],["speaking","mic","口语题目与录音"],["practice","file","刷题与写作"]].map(([r,i,t])=>`<button data-route="${r}">${icon(i)}<strong>${t}</strong>${icon("chevron")}</button>`).join("")}</div></section></section>`;
     }
@@ -130,15 +144,22 @@
       return `<section class="page lc-page">${head("四科词库",`今日已新学 ${c.learned} 词 · 已复习 ${c.reviewed} 词`,`<button class="button" data-lc-import="${skill}">${icon("upload")}导入</button>${btn("export",`${icon("download")}导出`)}`)}${tabs()}${api.expressions.modes(skill,false)}${batchSettings(skill)}<div class="lc-library-actions"><div class="lc-actions"><button class="button primary" data-lc-start="new" data-skill="${skill}" ${!remaining&&!data().learningSessions[skill]?"disabled":""}>${icon("plus")}${data().learningSessions[skill]?"继续本组":`新学 ${Math.min(batchSize(skill),remaining)}`}</button><button class="button" data-lc-start="review" data-skill="${skill}" ${!due.length?"disabled":""}>${icon("refresh")}复习 ${due.length}</button></div><span>已学 ${c.started} / ${c.words.length}</span></div><div class="lc-filters"><input id="lcSearch" value="${esc(query)}" type="search" placeholder="搜索单词或释义" aria-label="搜索词汇"><select id="lcFilter" aria-label="学习状态">${[["all","全部"],["new","未学"],["due","到期复习"],["learned","已学"],...(skill==="listening"?[["spelling","易错拼写"]]:[])].map(([v,l])=>`<option value="${v}" ${filter===v?"selected":""}>${l}</option>`).join("")}</select>${listeningTopics()}${articleSelect()}</div><div id="lcRows">${rows()}</div>${auditNotes()}</section>`;
     }
     function start(kind,key) {
+      skill=key;
+      if(api.route()!=="vocabulary")restoreScope(key);
       const existing=data().learningSessions[key];
-      if(existing) { skill=key;data().learningSession=existing;answer="";checked=false;save();toast(`继续未完成的${skills[skill][0]}学习组`);return navigate("review"); }
-      if(api.route()!=="vocabulary"){day="all";article="all";listeningBank="all";}
+      if(existing) {
+        const changed=existing.scope?JSON.stringify(existing.scope)!==JSON.stringify(scopeState()):existing.answerBank!==answerActive()||existing.ids.some(id=>{const w=wordsForSkill(key).find(w=>w.id===id);return w&&!inScope(w);});
+        if(!changed){data().learningSession=existing;answer="";checked=false;save();toast(`继续未完成的${skills[skill][0]}学习组`);return navigate("review");}
+        if(!window.confirm("背词范围已改变。放弃未完成的旧组，按新范围开始？已完成的学习记录会保留。"))return;
+        delete data().learningSessions[key];if(data().learningSession?.skill===key)data().learningSession=null;
+      }
+      rememberScope();
       skill=key; const c=counts(key);
       const candidates=(kind==="new"?c.fresh:c.due).filter(w=>inScope(w)&&(api.route()!=="vocabulary"||filter!=="spelling"||spellingPriority(w)));
       const priority=w=>w.personalAnswerWord?0:w.answerKinds?.includes("official")?1:w.answerKinds?.includes("teacher")?2:3;
       const selected=candidates.sort((a,b)=>(kind==="new"&&answerActive()?priority(a)-priority(b):0)||progress(a).nextAt-progress(b).nextAt).slice(0,kind==="new"?Math.min(batchSize(key),c.remaining):20);
       if(!selected.length) return toast(kind==="new"?"当前主题没有可新学词汇，或今日额度已完成":"当前主题没有到期词汇");
-      data().learningSession={skill:key,kind,ids:selected.map(w=>w.id),index:0,phase:kind==="new"?"intro":"recall",done:0,answerBank:answerActive()};
+      data().learningSession={skill:key,kind,ids:selected.map(w=>w.id),index:0,phase:kind==="new"?"intro":"recall",done:0,answerBank:answerActive(),scope:scopeState()};
       answer=""; checked=false; save(); navigate("review");
     }
     function abandon(key) {
@@ -199,6 +220,15 @@
     });
     document.addEventListener("input",e=>{if(e.target.id==="lcSearch"){query=e.target.value;page=0;document.querySelector("#lcRows").innerHTML=rows();}if(e.target.id==="lcAnswer")answer=e.target.value;});
     document.addEventListener("change",e=>{
+      if(e.target.matches("[data-lc-home-scope]")){
+        const key=e.target.dataset.lcHomeScope,value=e.target.value;skill=key;
+        listeningBank="all";day="all";article="all";answerSource="all";answerTopic="all";
+        if(key==="reading")article=value;
+        else if(value==="answers"||value==="personal"){listeningBank="answers";answerSource=value==="personal"?"personal":"core";}
+        else if(value.startsWith("scene:")){listeningBank="answers";answerSource="core";answerTopic=value.slice(6);}
+        else if(value.startsWith("day:"))day=value.slice(4);
+        rememberScope();return;
+      }
       if(e.target.matches("[data-lc-batch],[data-lc-quota]")){
         const el=e.target, key=el.dataset.lcBatch||el.dataset.lcQuota;
         if(!skills[key])return;
@@ -211,8 +241,8 @@
         }
         save();toast("学习数量已保存");navigate(api.route());return;
       }
-      if(e.target.id==="lcAnswerSource"||e.target.id==="lcAnswerTopic"){if(e.target.id==="lcAnswerSource")answerSource=e.target.value;else answerTopic=e.target.value;query="";page=0;navigate("vocabulary");return;}
-      if(e.target.id==="lcArticle"){article=e.target.value;page=0;navigate("vocabulary");return;}if(e.target.id==="lcFilter"||e.target.id==="lcDay"){if(e.target.id==="lcFilter")filter=e.target.value;else day=e.target.value;page=0;navigate("vocabulary");}});
+      if(e.target.id==="lcAnswerSource"||e.target.id==="lcAnswerTopic"){if(e.target.id==="lcAnswerSource")answerSource=e.target.value;else answerTopic=e.target.value;query="";page=0;rememberScope();navigate("vocabulary");return;}
+      if(e.target.id==="lcArticle"){article=e.target.value;page=0;rememberScope();navigate("vocabulary");return;}if(e.target.id==="lcFilter"||e.target.id==="lcDay"){if(e.target.id==="lcFilter")filter=e.target.value;else day=e.target.value;page=0;rememberScope();navigate("vocabulary");}});
     document.addEventListener("submit",e=>{
       if(e.target.id==="lcAnswerForm"){e.preventDefault();answer=document.querySelector("#lcAnswer").value;const w=sessionWord(data().learningSession);correct=[w.word,...(w.answers||[])].some(value=>answer.normalize("NFKC").trim().toLowerCase().replace(/\s+/g," ")===value.normalize("NFKC").trim().toLowerCase().replace(/\s+/g," "));checked=true;navigate("review");}
       if(e.target.id==="lcPlanForm"){e.preventDefault();const form=new FormData(e.target);for(const k of Object.keys(skills))data().learningPlan[k]=Math.max(0,Math.min(100,Math.floor(Number(form.get(k))||0)));api.expressions.savePlan(form);save();toast("每日新学计划已保存");navigate("study");}

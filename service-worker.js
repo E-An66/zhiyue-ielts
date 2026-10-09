@@ -1,4 +1,4 @@
-const BUILD = "20261009-abandon1";
+const BUILD = "20261009-scope1";
 const CACHE_NAME = `zhiyue-ielts-shell-${BUILD}`;
 const APP_SHELL = [
   "./cloud/account.css",
