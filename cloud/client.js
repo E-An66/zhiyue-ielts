@@ -22,7 +22,13 @@
     const button = document.createElement("button");
     button.className = "cloud-status-button";
     button.textContent = "登录 / 云同步";
-    document.querySelector(".sidebar-bottom").prepend(button);
+    const sidebar = document.querySelector(".sidebar-bottom");
+    const logoutShortcut = document.createElement("button");
+    logoutShortcut.className = "nav-button";
+    logoutShortcut.textContent = "退出登录";
+    logoutShortcut.hidden = true;
+    logoutShortcut.onclick = () => panel.querySelector("#cloudLogout").click();
+    sidebar.prepend(button, logoutShortcut);
     const mobile = document.createElement("button");
     mobile.className = "cloud-mobile-button";
     mobile.setAttribute("aria-label", "账号与同步状态");
@@ -132,7 +138,7 @@
         if (legacy) localStorage.setItem(prefix + "legacy-backup", legacy);
         write("state", api.getData());
       }
-      ready = true; gate(false);
+      ready = true; gate(false); logoutShortcut.hidden = false;
       panel.querySelector("#cloudAccountName").textContent = user.email;
       api.refresh();
       panel.querySelector("#cloudLogin").hidden = true;
@@ -166,12 +172,15 @@
     };
     panel.querySelector("#cloudSyncNow").onclick = () => sync(true);
     panel.querySelector("#cloudLogout").onclick = async () => {
-      if (running || api.busy()) { api.toast("请先结束练习，等待同步完成后退出"); return; }
+      if (running) { api.toast("正在同步，请稍后再点退出登录"); return; }
+      if (ready) write("state", api.getData());
       await sync(true);
       const pending = !model.same(base, api.getData()) || read("mediaQueue", []).length;
       if (pending && !confirm("尚有本机内容未上传，退出后仍会保留在这台设备，继续退出？")) return;
       clearTimeout(retrySession);
-      await client.auth.signOut({ scope: "local" });
+      const { error } = await client.auth.signOut({ scope: "local" });
+      if (error) { api.toast("退出失败，请稍后重试"); return; }
+      logoutShortcut.hidden = true;
       user = null; ready = false; gate(true);
       panel.querySelector("#cloudLogin").hidden = false;
       panel.querySelector("#cloudAccount").hidden = true;
