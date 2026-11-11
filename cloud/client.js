@@ -2,8 +2,11 @@
   "use strict";
   window.createStudyCloud = function (api) {
     const config = window.STUDY_CLOUD_CONFIG;
-    const client = window.supabase.createClient(config.url, config.key);
+    const client = window.supabase.createClient(config.url, config.key, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
     const model = window.StudySyncModel;
+    let retrySession;
     let user = null, base = {}, running = false, timer, ready = false, flushingMedia = false;
     const legacyKey = "zhiyue-reader-v1";
     let prefix = "zhiyue-cloud:loggedout:";
@@ -97,6 +100,7 @@
       schedule();
     }
     async function accept(session) {
+      clearTimeout(retrySession);
       if (!session) {
         user = null; ready = false; gate(true); open(); return;
       }
@@ -108,8 +112,13 @@
         if (!result.error) { catalogue = result.data.catalogue; write("catalogue", catalogue); }
       }
       if (!catalogue) {
-        user = null; gate(true); open();
-        panel.querySelector("#cloudMessage").textContent = "私人词库加载失败，请联网后重新登录";
+        ready = false; gate(true); open();
+        panel.querySelector("#cloudMessage").textContent = "登录已保留，正在重试连接学习资料…";
+        retrySession = setTimeout(async () => {
+          const { data, error } = await client.auth.getSession();
+          if (error) return accept(session);
+          await accept(data.session);
+        }, 5000);
         return;
       }
       for (const key of ["LISTENING_777_VOCAB", "READING_NOTES", "LISTENING_NOTES", "EXPRESSION_SEEDS", "LISTENING_ANSWER_BANK", "OCT08_AUDIT"]) {
@@ -148,7 +157,11 @@
         if (result.error) throw result.error;
         form.password.value = ""; message.textContent = "";
         await accept(result.data.session);
-      } catch { message.textContent = "登录失败，请检查密码和网络"; }
+      } catch (error) {
+        message.textContent = error.code === "invalid_credentials"
+          ? "账号或密码不正确。若账号使用 .example 邮箱，需先绑定可收信的邮箱。"
+          : "登录服务暂时无法连接，请稍后重试。";
+      }
       finally { submit.disabled = false; }
     };
     panel.querySelector("#cloudSyncNow").onclick = () => sync(true);
@@ -157,6 +170,7 @@
       await sync(true);
       const pending = !model.same(base, api.getData()) || read("mediaQueue", []).length;
       if (pending && !confirm("尚有本机内容未上传，退出后仍会保留在这台设备，继续退出？")) return;
+      clearTimeout(retrySession);
       await client.auth.signOut({ scope: "local" });
       user = null; ready = false; gate(true);
       panel.querySelector("#cloudLogin").hidden = false;
@@ -201,3 +215,4 @@
     return { changed, sync, upload, download, flushMedia };
   };
 })();
+
