@@ -1,4 +1,4 @@
-const BUILD = "20261111-tingjian";
+const BUILD = "20261111-logout";
 const CACHE_NAME = `zhiyue-ielts-shell-${BUILD}`;
 const APP_SHELL = [
   "./cloud/account.css",
