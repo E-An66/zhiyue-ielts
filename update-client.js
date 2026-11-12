@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  const BUILD = "20261112-mobile-sync";
+  const BUILD = "20261112-mobile-catalogue";
   const button = document.querySelector("#checkUpdate");
   const label = document.querySelector("#updateStatus");
   const banner = document.querySelector("#updateBanner");
