@@ -130,12 +130,13 @@
       for (const key of ["LISTENING_777_VOCAB", "READING_NOTES", "LISTENING_NOTES", "EXPRESSION_SEEDS", "LISTENING_ANSWER_BANK", "OCT08_AUDIT"]) {
         if (catalogue[key]) window[key] = catalogue[key];
       }
+      const usesLegacy = api.setAccount?.(user.id);
       base = read("base", {});
       const cache = read("state", null);
       if (cache) api.apply(cache);
       else {
         const legacy = localStorage.getItem(legacyKey);
-        if (legacy) localStorage.setItem(prefix + "legacy-backup", legacy);
+        if (usesLegacy && legacy) localStorage.setItem(prefix + "legacy-backup", legacy);
         write("state", api.getData());
       }
       ready = true; gate(false); logoutShortcut.hidden = false;
@@ -181,6 +182,7 @@
       const { error } = await client.auth.signOut({ scope: "local" });
       if (error) { api.toast("退出失败，请稍后重试"); return; }
       logoutShortcut.hidden = true;
+      api.setAccount?.(null);
       user = null; ready = false; gate(true);
       panel.querySelector("#cloudLogin").hidden = false;
       panel.querySelector("#cloudAccount").hidden = true;

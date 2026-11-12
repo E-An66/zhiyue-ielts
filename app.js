@@ -1,8 +1,9 @@
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "zhiyue-reader-v1";
-  const EXAM_DB_NAME = "zhiyue-ielts-assets-v1";
+  let STORAGE_KEY = "zhiyue-reader-v1";
+  let EXAM_DB_NAME = "zhiyue-ielts-assets-v1";
+  let assetVersionPrefix = "zhiyue-asset-version:";
   const EXAM_STORE = "exam-files";
   const DAY = 86400000;
   const $ = (selector, root = document) => root.querySelector(selector);
@@ -229,7 +230,7 @@
       transaction.onerror = () => reject(transaction.error);
     });
     db.close();
-    localStorage.setItem(`zhiyue-asset-version:${key}`, version);
+    localStorage.setItem(`${assetVersionPrefix}${key}`, version);
     if (!cloudCopy) {
       save();
       studyCloud?.upload(key, file, version).catch(() => showToast("文件已保存在本机，联网后重试上传"));
@@ -248,7 +249,7 @@
   async function getExamAsset(key) {
     const local = await getLocalExamAsset(key);
     const version = data.assetVersions?.[key] || "legacy";
-    if (local && (localStorage.getItem(`zhiyue-asset-version:${key}`) || "legacy") === version) return local;
+    if (local && (localStorage.getItem(`${assetVersionPrefix}${key}`) || "legacy") === version) return local;
     const remote = await studyCloud?.download(key);
     if (remote) await putExamAsset(key, remote, true);
     return remote || null;
@@ -1671,6 +1672,20 @@
   setInterval(() => { if (route === "study" && !document.hidden && !document.querySelector("dialog[open]")) render(); }, 30000);
   render();
   studyCloud = window.createStudyCloud({
+    setAccount: accountId => {
+      const ownerKey = "zhiyue-local-owner:" + (accountId || "guest");
+      let usesLegacy = localStorage.getItem(ownerKey);
+      if (usesLegacy === null) {
+        usesLegacy = accountId && localStorage.getItem("zhiyue-cloud:" + accountId + ":state") ? "yes" : "no";
+        localStorage.setItem(ownerKey, usesLegacy);
+      }
+      const suffix = usesLegacy === "yes" ? "" : ":" + (accountId || "guest");
+      STORAGE_KEY = "zhiyue-reader-v1" + suffix;
+      EXAM_DB_NAME = "zhiyue-ielts-assets-v1" + suffix;
+      assetVersionPrefix = "zhiyue-asset-version" + suffix + ":";
+      data = loadState();
+      return usesLegacy === "yes";
+    },
     getData: () => data,
     apply: state => { data = Object.assign(loadState(), state); localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); render(); },
     toast: showToast,
