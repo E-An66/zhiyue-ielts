@@ -2,8 +2,14 @@
   "use strict";
   window.createStudyCloud = function (api) {
     const config = window.STUDY_CLOUD_CONFIG;
-    const client = window.supabase.createClient(config.url, config.key, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    const projectRef = new URL(config.url).hostname.split(".")[0];
+    const client = window.supabase.createClient(config.gatewayUrl || config.url, config.key, {
+      auth: {
+        storageKey: `sb-${projectRef}-auth-token`,
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+      }
     });
     const model = window.StudySyncModel;
     let retrySession;

@@ -1,4 +1,4 @@
-const BUILD = "20261112-login-fix";
+const BUILD = "20261112-mobile-sync";
 const CACHE_NAME = `zhiyue-ielts-shell-${BUILD}`;
 const APP_SHELL = [
   "./cloud/account.css",
