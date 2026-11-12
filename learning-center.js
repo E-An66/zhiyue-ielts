@@ -136,7 +136,7 @@
     function rows() {
       const all=listWords(); page=Math.min(page,Math.max(0,Math.ceil(all.length/40)-1));
       const items=all.slice(page*40,page*40+40);
-      return `<div class="lc-word-list">${items.length?items.map(w=>`<article class="lc-word-row"><div><button class="lc-word-speak" data-speak="${esc(w.word)}">${esc(w.word)} ${icon("volume")}</button><small>${esc(w.phonetic||"")}</small></div><div class="lc-word-meaning"><p>${esc(w.meaning)}${(answerActive()?w.answerTopic:w.topic)?`<small class="lc-word-source">${esc(answerActive()?w.answerTopic:w.topic)}</small>`:""}</p>${answerActive()?answerMetadata(w):""}</div><div><span class="lc-status">${status(w)}</span><small>${progress(w).started?interval(progress(w).nextAt):"等待新学"}</small></div></article>`).join(""):`<div class="empty-state">${icon("book")}<p>${filter==="due"?"当前没有到期词汇":filter==="new"?"当前没有未学词汇":"没有匹配的词汇"}</p>${!wordsForSkill(skill).length?`<button class="button primary" data-lc-import="${skill}">导入${skills[skill][0]}词表</button>`:""}</div>`}</div><div class="lc-pagination">${btn("prev",icon("back"),false,page===0)}<span>${all.length} 词 · ${page+1} / ${Math.max(1,Math.ceil(all.length/40))}</span>${btn("next",icon("chevron"),false,(page+1)*40>=all.length)}</div>`;
+      return `<div class="lc-word-list">${items.length?items.map(w=>`<article class="lc-word-row"><div><button class="lc-word-speak" data-speak="${esc(w.word)}">${esc(w.word)} ${icon("volume")}</button><small>${esc(w.phonetic||"")}</small></div><div class="lc-word-meaning"><p>${esc(w.meaning)}${(answerActive()?w.answerTopic:w.topic)?`<small class="lc-word-source">${esc(answerActive()?w.answerTopic:w.topic)}</small>`:""}</p>${answerActive()?answerMetadata(w):""}</div><div><span class="lc-status">${status(w)}</span><small>${progress(w).started?interval(progress(w).nextAt):"等待新学"}</small><button type="button" class="button ghost lc-word-delete" data-lc="delete-word" data-word-id="${esc(w.id)}" aria-label="删除 ${esc(w.word)}">删除</button></div></article>`).join(""):`<div class="empty-state">${icon("book")}<p>${filter==="due"?"当前没有到期词汇":filter==="new"?"当前没有未学词汇":"没有匹配的词汇"}</p>${!wordsForSkill(skill).length?`<button class="button primary" data-lc-import="${skill}">导入${skills[skill][0]}词表</button>`:""}</div>`}</div><div class="lc-pagination">${btn("prev",icon("back"),false,page===0)}<span>${all.length} 词 · ${page+1} / ${Math.max(1,Math.ceil(all.length/40))}</span>${btn("next",icon("chevron"),false,(page+1)*40>=all.length)}</div>`;
     }
     function auditNotes() {
       const notes=window.OCT08_AUDIT?.[skill];
@@ -234,6 +234,10 @@
       if(el.dataset.lcImport){document.querySelector("#vocabImportSkill").value=el.dataset.lcImport;document.querySelector("#vocabImportDialog").showModal();return;}
       if(el.dataset.lcRate) return rate(Number(el.dataset.lcRate));
       const action=el.dataset.lc;
+      if(action==="delete-word"){
+        if(api.deleteVocabularyWord(skill,el.dataset.wordId))navigate("vocabulary");
+        return;
+      }
       if(action==="abandon")return abandon(el.dataset.skill||skill);
       if(action==="answers"){skill="listening";listeningBank="answers";answerSource="core";answerTopic="all";day="all";article="all";query="";filter="all";page=0;rememberScope();return navigate("vocabulary");}
       if(action==="home")return navigate("study"); if(action==="library")return navigate("vocabulary");if(action==="plan")return navigate("plan");if(action==="resume"){data().learningSession=data().learningSessions[el.dataset.sessionSkill];skill=data().learningSession.skill;listeningBank=data().learningSession.answerBank?"answers":"all";answer="";checked=false;save();return navigate("review");}if(action==="export")return exportWords();

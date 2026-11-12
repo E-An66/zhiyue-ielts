@@ -152,7 +152,7 @@
       const merged = Object.assign(fallback, stored);
       merged.vocabProgress ||= {};
       merged.words.forEach(word => { word.skill ||= "reading"; });
-      return merged;
+      return window.StudySyncModel.cleanVocabulary(merged);
     } catch (error) {
       return fallback;
     }
@@ -460,9 +460,10 @@
 
   function wordsForSkill(skill = vocabSkill) {
     const custom = data.words.filter(item => (item.skill || "reading") === skill).map(item => ({ ...item, skill: item.skill || "reading", source: item.source || "custom" }));
-    if (skill === "reading") return [...(window.READING_NOTES?.words || []), ...custom];
-    if (skill !== "listening") return custom;
-    const base = [...builtInListeningWords(), ...custom];
+    const visible = words => words.filter(word => !Object.hasOwn(data.hiddenVocabulary || {}, word.id));
+    if (skill === "reading") return visible([...(window.READING_NOTES?.words || []), ...custom]);
+    if (skill !== "listening") return visible(custom);
+    const base = builtInListeningWords();
     const normalize = s => s.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, " ");
     const recent = [], used = new Set();
     for (const note of (window.LISTENING_NOTES?.words || [])) {
@@ -490,7 +491,18 @@
           reviews: existing.reviews || 0 };
       }
     }
-    return combined;
+    return visible([...combined, ...custom]);
+  }
+
+  function deleteVocabularyWord(skill, id) {
+    const word = wordsForSkill(skill).find(item => item.id === id);
+    if (!word || !window.confirm(`删除词条“${word.word}”？此操作会同步到当前学习账号。`)) return false;
+    data.hiddenVocabulary ||= {};
+    data.hiddenVocabulary[id] = true;
+    window.StudySyncModel.cleanVocabulary(data);
+    save();
+    showToast("词汇已删除");
+    return true;
   }
 
   function wordProgress(item) {
@@ -1433,7 +1445,7 @@
       save(); render(); showToast(mastered ? "已重新加入复习" : "已标记为掌握"); return;
     }
     const deleteButton = event.target.closest("[data-delete-word]");
-    if (deleteButton) { data.words = data.words.filter(item => item.id !== deleteButton.dataset.deleteWord); delete data.vocabProgress[deleteButton.dataset.deleteWord]; save(); render(); showToast("词汇已移除"); return; }
+    if (deleteButton && deleteVocabularyWord(vocabSkill, deleteButton.dataset.deleteWord)) render();
 
     if (event.target.closest("#toggleAI")) { $("#aiPanel")?.classList.toggle("open"); return; }
     if (event.target.closest("#generateNote")) { aiTab = "summary"; const panel = $("#aiPanel"); if (panel) { panel.outerHTML = aiPanelMarkup(currentArticle()); $("#aiPanel").classList.add("open"); } showToast("精读笔记已生成"); return; }
@@ -1490,12 +1502,13 @@
     }).filter(item => /[A-Za-z]/.test(item.word) && item.word.length <= 100);
   }
 
-  function importVocabulary(text, skill) {
-    const parsed = parseVocabularyRows(text);
-    const existing = new Set(wordsForSkill(skill).map(item => item.word.trim().toLowerCase()));
+  function importVocabulary(sources, skill) {
+    const parsed = sources.flatMap(parseVocabularyRows);
+    const keyFor = item => window.StudySyncModel.vocabularyKey(item, skill);
+    const existing = new Set(wordsForSkill(skill).map(keyFor));
     let added = 0;
     parsed.forEach((item, index) => {
-      const key = item.word.toLowerCase();
+      const key = keyFor(item);
       if (existing.has(key)) return;
       existing.add(key);
       data.words.push({
@@ -1598,8 +1611,8 @@
     const pasted = $("#vocabImportText").value.trim();
     if (!file && !pasted) return showToast("请选择词表文件，或先粘贴词汇内容");
     try {
-      const content = [file ? await file.text() : "", pasted].filter(Boolean).join("\n");
-      const result = importVocabulary(content, skill);
+      const sources = [file ? await file.text() : "", pasted].filter(Boolean);
+      const result = importVocabulary(sources, skill);
       if (!result.total) return showToast("没有识别到英文词汇，请检查文件格式");
       vocabSkill = skill;
       learningCenter.select(skill);
@@ -1671,7 +1684,7 @@
     return `<section class="page lc-page"><header class="lc-heading"><div><p class="lc-eyebrow">知阅 IELTS</p><h1>刷题与写作</h1><p>按训练目标选择资料</p></div></header><div class="lc-practice-links practice-directory">${[["cambridge","file","剑雅资料库","导入题目、原文与音频"],["listening","headphones","听力模拟练习","Section 1–4 示例练习"],["library","book","阅读文章库","阅读、选词与笔记"],["writing","pen","写作练习","Task 1 / Task 2 草稿"]].map(([r,i,t,d])=>`<button data-route="${r}">${icon(i)}<div><strong>${t}</strong><small>${d}</small></div>${icon("chevron")}</button>`).join("")}</div></section>`;
   }
   const expressionCenter = window.createExpressionCenter({ getData: () => data, save, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, putAsset: putExamAsset, getAsset: getExamAsset, route: () => route, openWords: key => { learningCenter.select(key); setRoute("vocabulary"); } });
-  const learningCenter = window.createLearningCenter({ expressions: expressionCenter, getData: () => data, save, wordsForSkill, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, detail: word => wordDetails[word.toLowerCase()], route: () => route });
+  const learningCenter = window.createLearningCenter({ expressions: expressionCenter, getData: () => data, save, wordsForSkill, deleteVocabularyWord, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, detail: word => wordDetails[word.toLowerCase()], route: () => route });
   const practiceStudio = window.createPracticeStudio({ getData: () => data, save, wordsForSkill, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, putAsset: putExamAsset, getAsset: getExamAsset, align: alignSpeechWords, speakingParts,
     detail: word => { const known = wordDetails[word.toLowerCase()]; if (known) return known; const row = (window.ZHONGKAO_VOCAB || []).find(r => String(r[0]).toLowerCase() === word.toLowerCase()); return row ? { meaning: row[1], phonetic: row[2] } : null; },
     listeningSources: () => Object.keys(listeningSections).flatMap(key => listeningMaterials(key).map((m, i) => ({ id: `sample:${key}:${i}`, title: m.title, source: "示例文本", segments: m.segments.map(s => ({ text: s[1] })) })))
@@ -1694,7 +1707,7 @@
       return usesLegacy === "yes";
     },
     getData: () => data,
-    apply: state => { data = Object.assign(loadState(), state); localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); render(); },
+    apply: state => { data = window.StudySyncModel.cleanVocabulary(Object.assign(loadState(), state)); localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); render(); },
     toast: showToast,
     refresh: render,
     localAsset: getLocalExamAsset,
