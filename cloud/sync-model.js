@@ -44,6 +44,66 @@
     const n = new Date(progress?.card?.last_review || progress?.lastReviewedAt || progress?.learnedAt || 0).getTime();
     return Number.isFinite(n) ? n : 0;
   }
+  function vocabularyKey(word, skill = word.skill || "reading") {
+    const fields = [word.word, word.meaning, word.phonetic, word.pos];
+    return JSON.stringify([skill, ...fields.map(value => String(value ?? "").trim())]);
+  }
+
+  function cleanVocabulary(state) {
+    if (!Array.isArray(state.words)) return state;
+    const hidden = state.hiddenVocabulary || {};
+    const progress = state.vocabProgress || {};
+    const canonical = new Map();
+    const replaced = new Map();
+    const imports = state.words.filter(word => word.source === "import" && !Object.hasOwn(hidden, word.id))
+      .sort((a, b) => (Number(a.addedAt) || 0) - (Number(b.addedAt) || 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    for (const word of imports) {
+      const key = vocabularyKey(word);
+      const keep = canonical.get(key);
+      if (!keep) {
+        canonical.set(key, word);
+        continue;
+      }
+      if (keep.id === word.id) continue;
+      replaced.set(word.id, keep.id);
+      hidden[word.id] = true;
+      const old = progress[word.id], current = progress[keep.id];
+      if (old && (!current || reviewTime(old) > reviewTime(current) ||
+          (reviewTime(old) === reviewTime(current) && Number(old.reviews || 0) > Number(current.reviews || 0)))) {
+        progress[keep.id] = old;
+      }
+    }
+    if (!Object.keys(hidden).length) return state;
+    state.hiddenVocabulary = hidden;
+    state.words = state.words.filter(word => !Object.hasOwn(hidden, word.id));
+    for (const id of Object.keys(hidden)) delete progress[id];
+
+    function cleanSession(session) {
+      if (!Array.isArray(session?.ids) || !session.ids.some(id => Object.hasOwn(hidden, id))) return session;
+      const ids = [], seen = new Set();
+      let index = 0;
+      for (let i = 0; i < session.ids.length; i++) {
+        const original = session.ids[i];
+        const id = replaced.get(original) || original;
+        if (seen.has(id) || Object.hasOwn(hidden, id)) continue;
+        seen.add(id);
+        ids.push(id);
+        if (i < session.index) index++;
+      }
+      return index < ids.length ? { ...session, ids, index } : null;
+    }
+
+    for (const [skill, session] of Object.entries(state.learningSessions || {})) {
+      const kept = cleanSession(session);
+      if (kept) state.learningSessions[skill] = kept;
+      else delete state.learningSessions[skill];
+    }
+    if (state.learningSession) {
+      state.learningSession = state.learningSessions?.[state.learningSession.skill] || cleanSession(state.learningSession);
+    }
+    return state;
+  }
+
   function merge(base, local, remote, options = {}) {
     const conflicts = [];
     function combine(b, l, r, path) {
@@ -105,7 +165,7 @@
       const current = state.learningSession;
       state.learningSession = current?.skill && state.learningSessions[current.skill] || null;
     }
-    return { state, conflicts };
+    return { state: cleanVocabulary(state), conflicts };
   }
-  root.StudySyncModel = { merge, same, fingerprint };
+  root.StudySyncModel = { merge, same, fingerprint, vocabularyKey, cleanVocabulary };
 })(typeof window === "undefined" ? globalThis : window);
