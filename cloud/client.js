@@ -120,8 +120,13 @@
       prefix = "zhiyue-cloud:" + user.id + ":";
       let catalogue = read("catalogue", null);
       if (navigator.onLine) {
-        const result = await client.from("study_private_catalogue").select("catalogue").eq("user_id", user.id).single();
-        if (!result.error) { catalogue = result.data.catalogue; write("catalogue", catalogue); }
+        const { data: rows, error } = await client.from("study_private_catalogue")
+          .select("catalogue").eq("user_id", user.id).limit(1);
+        const remoteCatalogue = rows?.[0]?.catalogue;
+        if (!error && remoteCatalogue) {
+          catalogue = remoteCatalogue;
+          write("catalogue", catalogue);
+        }
       }
       if (!catalogue) {
         ready = false; gate(true); open();
