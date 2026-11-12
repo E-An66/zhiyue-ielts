@@ -138,7 +138,14 @@
   }
 
   function loadState() {
-    const fallback = { articles: articleSeeds, words: baseWords(), vocabProgress: {}, notes: {}, writingDrafts: {}, examLibrary: {}, intensiveNotes: {}, intensiveReviews: [], speechReports: [], reviewed: 67, streak: 4 };
+    const fallback = {
+      learningPlan: { listening: 10, speaking: 5, reading: 5, writing: 5 },
+      learningBatchSizes: {}, studyLog: [], learningSessions: {},
+      expressionProgress: {}, expressionEnabled: {},
+      expressionPlan: { listening: 2, speaking: 2, reading: 3, writing: 2 },
+      expressionSessions: {}, expressionEntries: {}, expressionLog: [], expressionDrafts: {},
+      studioMaterials: [], studioNotes: {}, oralAnswers: {},
+      articles: articleSeeds, words: baseWords(), vocabProgress: {}, notes: {}, writingDrafts: {}, examLibrary: {}, intensiveNotes: {}, intensiveReviews: [], speechReports: [], reviewed: 67, streak: 4 };
     try {
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY));
       if (!stored || !Array.isArray(stored.articles) || !Array.isArray(stored.words)) return fallback;
