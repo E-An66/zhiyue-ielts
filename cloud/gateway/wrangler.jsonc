@@ -1,0 +1,6 @@
+{
+  "name": "zhiyue-study-gateway",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-12",
+  "observability": { "enabled": false }
+}
