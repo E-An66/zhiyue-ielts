@@ -1,6 +1,6 @@
 (function () {
   "use strict";
-  const BUILD = "20261112-vocab-cleanup";
+  const BUILD = "20261112-vocab-bulk-delete";
   const button = document.querySelector("#checkUpdate");
   const label = document.querySelector("#updateStatus");
   const banner = document.querySelector("#updateBanner");

@@ -1,4 +1,4 @@
-const BUILD = "20261112-vocab-cleanup";
+const BUILD = "20261112-vocab-bulk-delete";
 const CACHE_NAME = `zhiyue-ielts-shell-${BUILD}`;
 const APP_SHELL = [
   "./cloud/account.css",

@@ -292,6 +292,7 @@
   }
 
   function setRoute(nextRoute) {
+    if (route === "vocabulary" && nextRoute !== route) learningCenter.resetSelection();
     if (nextRoute !== route) expressionCenter.leave();
     if (nextRoute !== route) practiceStudio.leave();
     if (nextRoute !== "speaking" && speakingTimer) { clearInterval(speakingTimer); speakingTimer = null; }
@@ -494,14 +495,17 @@
     return visible([...combined, ...custom]);
   }
 
-  function deleteVocabularyWord(skill, id) {
-    const word = wordsForSkill(skill).find(item => item.id === id);
-    if (!word || !window.confirm(`删除词条“${word.word}”？此操作会同步到当前学习账号。`)) return false;
+  function deleteVocabularyWords(skill, ids) {
+    const selected = new Set(ids);
+    const words = wordsForSkill(skill).filter(item => selected.has(item.id));
+    if (!words.length) return false;
+    const label = words.length === 1 ? `词条“${words[0].word}”` : `选中的 ${words.length} 条${VOCAB_SKILLS[skill].label}词汇`;
+    if (!window.confirm(`删除${label}？此操作会同步到当前学习账号。`)) return false;
     data.hiddenVocabulary ||= {};
-    data.hiddenVocabulary[id] = true;
+    for (const word of words) data.hiddenVocabulary[word.id] = true;
     window.StudySyncModel.cleanVocabulary(data);
     save();
-    showToast("词汇已删除");
+    showToast(`已删除 ${words.length} 条词汇`);
     return true;
   }
 
@@ -1445,7 +1449,7 @@
       save(); render(); showToast(mastered ? "已重新加入复习" : "已标记为掌握"); return;
     }
     const deleteButton = event.target.closest("[data-delete-word]");
-    if (deleteButton && deleteVocabularyWord(vocabSkill, deleteButton.dataset.deleteWord)) render();
+    if (deleteButton && deleteVocabularyWords(vocabSkill, [deleteButton.dataset.deleteWord])) render();
 
     if (event.target.closest("#toggleAI")) { $("#aiPanel")?.classList.toggle("open"); return; }
     if (event.target.closest("#generateNote")) { aiTab = "summary"; const panel = $("#aiPanel"); if (panel) { panel.outerHTML = aiPanelMarkup(currentArticle()); $("#aiPanel").classList.add("open"); } showToast("精读笔记已生成"); return; }
@@ -1684,7 +1688,7 @@
     return `<section class="page lc-page"><header class="lc-heading"><div><p class="lc-eyebrow">知阅 IELTS</p><h1>刷题与写作</h1><p>按训练目标选择资料</p></div></header><div class="lc-practice-links practice-directory">${[["cambridge","file","剑雅资料库","导入题目、原文与音频"],["listening","headphones","听力模拟练习","Section 1–4 示例练习"],["library","book","阅读文章库","阅读、选词与笔记"],["writing","pen","写作练习","Task 1 / Task 2 草稿"]].map(([r,i,t,d])=>`<button data-route="${r}">${icon(i)}<div><strong>${t}</strong><small>${d}</small></div>${icon("chevron")}</button>`).join("")}</div></section>`;
   }
   const expressionCenter = window.createExpressionCenter({ getData: () => data, save, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, putAsset: putExamAsset, getAsset: getExamAsset, route: () => route, openWords: key => { learningCenter.select(key); setRoute("vocabulary"); } });
-  const learningCenter = window.createLearningCenter({ expressions: expressionCenter, getData: () => data, save, wordsForSkill, deleteVocabularyWord, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, detail: word => wordDetails[word.toLowerCase()], route: () => route });
+  const learningCenter = window.createLearningCenter({ expressions: expressionCenter, getData: () => data, save, wordsForSkill, deleteVocabularyWords, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, detail: word => wordDetails[word.toLowerCase()], route: () => route });
   const practiceStudio = window.createPracticeStudio({ getData: () => data, save, wordsForSkill, icon, escapeHtml, navigate: setRoute, speak, toast: showToast, putAsset: putExamAsset, getAsset: getExamAsset, align: alignSpeechWords, speakingParts,
     detail: word => { const known = wordDetails[word.toLowerCase()]; if (known) return known; const row = (window.ZHONGKAO_VOCAB || []).find(r => String(r[0]).toLowerCase() === word.toLowerCase()); return row ? { meaning: row[1], phonetic: row[2] } : null; },
     listeningSources: () => Object.keys(listeningSections).flatMap(key => listeningMaterials(key).map((m, i) => ({ id: `sample:${key}:${i}`, title: m.title, source: "示例文本", segments: m.segments.map(s => ({ text: s[1] })) })))
@@ -1693,6 +1697,7 @@
   render();
   studyCloud = window.createStudyCloud({
     setAccount: accountId => {
+      learningCenter.resetSelection();
       const ownerKey = "zhiyue-local-owner:" + (accountId || "guest");
       let usesLegacy = localStorage.getItem(ownerKey);
       if (usesLegacy === null) {

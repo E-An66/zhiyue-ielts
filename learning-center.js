@@ -10,6 +10,13 @@
     let skill = "listening", filter = "all", query = "", day = "all", article = "all", page = 0, answer = "", checked = false, correct = false;
     let listeningBank = "all", answerTopic = "all", answerSource = "all";
     let lastAutoPronunciation = "";
+    let selectionScope = null;
+    const selectedWords = new Set();
+    function resetSelection() {
+      selectionScope = null;
+      selectedWords.clear();
+    }
+    const wordScope = () => JSON.stringify([skill, scopeState(), filter, query]);
     const data = () => getData();
     data().learningPlan ||= { listening: 10, speaking: 5, reading: 5, writing: 5 };
     data().learningBatchSizes ||= {};
@@ -133,10 +140,27 @@
         return match && inScope(w) && `${w.word} ${w.meaning}`.toLowerCase().includes(query.toLowerCase());
       });
     }
+    function bulkToolbar(items) {
+      if (selectionScope === null) {
+        return items.length ? '<div class="lc-word-bulk"><button type="button" class="button" data-lc="bulk-start">批量删除</button></div>' : "";
+      }
+      const pageSelected = items.length && items.every(word => selectedWords.has(word.id));
+      return `<div class="lc-word-bulk">
+        <button type="button" class="button" data-lc="bulk-page" ${items.length ? "" : "disabled"}>${pageSelected ? "取消当前页全选" : "全选当前页"}</button>
+        <span id="lcSelectedCount" role="status">已选 ${selectedWords.size} 条</span>
+        <button type="button" class="button danger" data-lc="bulk-delete" ${selectedWords.size ? "" : "disabled"}>删除所选</button>
+        <button type="button" class="button ghost" data-lc="bulk-cancel">取消</button>
+      </div>`;
+    }
     function rows() {
+      if (selectionScope !== null && selectionScope !== wordScope()) resetSelection();
       const all=listWords(); page=Math.min(page,Math.max(0,Math.ceil(all.length/40)-1));
       const items=all.slice(page*40,page*40+40);
-      return `<div class="lc-word-list">${items.length?items.map(w=>`<article class="lc-word-row"><div><button class="lc-word-speak" data-speak="${esc(w.word)}">${esc(w.word)} ${icon("volume")}</button><small>${esc(w.phonetic||"")}</small></div><div class="lc-word-meaning"><p>${esc(w.meaning)}${(answerActive()?w.answerTopic:w.topic)?`<small class="lc-word-source">${esc(answerActive()?w.answerTopic:w.topic)}</small>`:""}</p>${answerActive()?answerMetadata(w):""}</div><div><span class="lc-status">${status(w)}</span><small>${progress(w).started?interval(progress(w).nextAt):"等待新学"}</small><button type="button" class="button ghost lc-word-delete" data-lc="delete-word" data-word-id="${esc(w.id)}" aria-label="删除 ${esc(w.word)}">删除</button></div></article>`).join(""):`<div class="empty-state">${icon("book")}<p>${filter==="due"?"当前没有到期词汇":filter==="new"?"当前没有未学词汇":"没有匹配的词汇"}</p>${!wordsForSkill(skill).length?`<button class="button primary" data-lc-import="${skill}">导入${skills[skill][0]}词表</button>`:""}</div>`}</div><div class="lc-pagination">${btn("prev",icon("back"),false,page===0)}<span>${all.length} 词 · ${page+1} / ${Math.max(1,Math.ceil(all.length/40))}</span>${btn("next",icon("chevron"),false,(page+1)*40>=all.length)}</div>`;
+      if (selectionScope !== null && selectedWords.size) {
+        const visible = new Set(all.map(word => word.id));
+        for (const id of selectedWords) if (!visible.has(id)) selectedWords.delete(id);
+      }
+      return `${bulkToolbar(items)}<div class="lc-word-list">${items.length?items.map(w=>`<article class="lc-word-row"><div>${selectionScope !== null ? `<label class="lc-word-select"><input type="checkbox" data-lc-select-word="${esc(w.id)}" ${selectedWords.has(w.id) ? "checked" : ""}>选中 <span class="lc-word-select-name">${esc(w.word)}</span></label>` : ""}<button class="lc-word-speak" data-speak="${esc(w.word)}">${esc(w.word)} ${icon("volume")}</button><small>${esc(w.phonetic||"")}</small></div><div class="lc-word-meaning"><p>${esc(w.meaning)}${(answerActive()?w.answerTopic:w.topic)?`<small class="lc-word-source">${esc(answerActive()?w.answerTopic:w.topic)}</small>`:""}</p>${answerActive()?answerMetadata(w):""}</div><div><span class="lc-status">${status(w)}</span><small>${progress(w).started?interval(progress(w).nextAt):"等待新学"}</small>${selectionScope === null ? `<button type="button" class="button ghost lc-word-delete" data-lc="delete-word" data-word-id="${esc(w.id)}" aria-label="删除 ${esc(w.word)}">删除</button>` : ""}</div></article>`).join(""):`<div class="empty-state">${icon("book")}<p>${filter==="due"?"当前没有到期词汇":filter==="new"?"当前没有未学词汇":"没有匹配的词汇"}</p>${!wordsForSkill(skill).length?`<button class="button primary" data-lc-import="${skill}">导入${skills[skill][0]}词表</button>`:""}</div>`}</div><div class="lc-pagination">${btn("prev",icon("back"),false,page===0)}<span>${all.length} 词 · ${page+1} / ${Math.max(1,Math.ceil(all.length/40))}</span>${btn("next",icon("chevron"),false,(page+1)*40>=all.length)}</div>`;
     }
     function auditNotes() {
       const notes=window.OCT08_AUDIT?.[skill];
@@ -235,7 +259,27 @@
       if(el.dataset.lcRate) return rate(Number(el.dataset.lcRate));
       const action=el.dataset.lc;
       if(action==="delete-word"){
-        if(api.deleteVocabularyWord(skill,el.dataset.wordId))navigate("vocabulary");
+        if(api.deleteVocabularyWords(skill,[el.dataset.wordId]))navigate("vocabulary");
+        return;
+      }
+      if(action==="bulk-start" || action==="bulk-cancel"){
+        if(action==="bulk-start") selectionScope=wordScope();
+        else resetSelection();
+        document.querySelector("#lcRows").innerHTML=rows();
+        return;
+      }
+      if(action==="bulk-page"){
+        const boxes=[...document.querySelectorAll("#lcRows [data-lc-select-word]")];
+        const select=boxes.some(box=>!box.checked);
+        for(const box of boxes) box.checked=select;
+        updateSelection(boxes);
+        return;
+      }
+      if(action==="bulk-delete"){
+        if(selectionScope===wordScope() && api.deleteVocabularyWords(skill,selectedWords)){
+          resetSelection();
+          navigate("vocabulary");
+        }
         return;
       }
       if(action==="abandon")return abandon(el.dataset.skill||skill);
@@ -246,7 +290,20 @@
       if(action==="forgot"){checked=true;correct=false;answer=document.querySelector("#lcAnswer")?.value||"";navigate("review");}
     });
     document.addEventListener("input",e=>{if(e.target.id==="lcSearch"){query=e.target.value;page=0;document.querySelector("#lcRows").innerHTML=rows();}if(e.target.id==="lcAnswer")answer=e.target.value;});
+    function updateSelection(changedBoxes) {
+      if (selectionScope !== wordScope()) return;
+      for (const box of changedBoxes) {
+        const id = box.dataset.lcSelectWord;
+        if (box.checked) selectedWords.add(id);
+        else selectedWords.delete(id);
+      }
+      document.querySelector("#lcSelectedCount").textContent=`已选 ${selectedWords.size} 条`;
+      document.querySelector('[data-lc="bulk-delete"]').disabled=!selectedWords.size;
+      const boxes=[...document.querySelectorAll("#lcRows [data-lc-select-word]")];
+      document.querySelector('[data-lc="bulk-page"]').textContent=boxes.every(item=>item.checked)?"取消当前页全选":"全选当前页";
+    }
     document.addEventListener("change",e=>{
+      if(e.target.matches("[data-lc-select-word]"))return updateSelection([e.target]);
       if(e.target.id==="lcAutoPronounce"){
         data().learningAutoPronounce=e.target.checked;save();
         if(e.target.checked){lastAutoPronunciation="";hydrate();}
@@ -280,6 +337,6 @@
       if(e.target.id==="lcAnswerForm"){e.preventDefault();answer=document.querySelector("#lcAnswer").value;const w=sessionWord(data().learningSession);correct=[w.word,...(w.answers||[])].some(value=>answer.normalize("NFKC").trim().toLowerCase().replace(/\s+/g," ")===value.normalize("NFKC").trim().toLowerCase().replace(/\s+/g," "));checked=true;navigate("review");}
       if(e.target.id==="lcPlanForm"){e.preventDefault();const form=new FormData(e.target);for(const k of Object.keys(skills))data().learningPlan[k]=Math.max(0,Math.min(100,Math.floor(Number(form.get(k))||0)));api.expressions.savePlan(form);save();toast("每日新学计划已保存");navigate("study");}
     });
-    return {home,library,session,hydrate,plan,counts,progress,start,select:key=>{listeningBank="all";skill=key;day="all";article="all";filter="all";query="";page=0;},interval};
+    return {home,library,session,hydrate,plan,counts,progress,start,resetSelection,select:key=>{resetSelection();listeningBank="all";skill=key;day="all";article="all";filter="all";query="";page=0;},interval};
   };
 })();

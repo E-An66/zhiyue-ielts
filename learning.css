@@ -310,3 +310,10 @@
   padding: 4px 10px;
   font-size: 12px;
 }
+
+.lc-word-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; }
+.lc-word-bulk [role="status"] { margin: 0 4px; font-size: 13px; }
+.lc-word-bulk [data-lc="bulk-delete"] { color: #9b2525; }
+.lc-word-select { display: flex; align-items: center; gap: 6px; width: fit-content; margin-bottom: 5px; font-size: 13px; cursor: pointer; }
+.lc-word-select input { width: 18px; height: 18px; margin: 0; }
+.lc-word-select-name { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
