@@ -5,9 +5,63 @@ const phonetics={"certificate": "/səˈtɪfɪkeɪt/", "map": "/mæp/", "insuranc
 function stop(){clearTimeout(dictTimer);if(typeof player!=='undefined')player.pause();running=false;runId++;clearTimeout(timer);if('speechSynthesis'in window)speechSynthesis.cancel();document.querySelector('.play').textContent='▶'}
 function mode(m){stop();currentMode=m;el('dictMode').className=m==='dict'?'active':'';el('listenMode').className=m==='listen'?'active':'';el('dictation').hidden=m!=='dict';el('listening').hidden=m!=='listen';render()}
 function britishVoice(){return speechSynthesis.getVoices().find(v=>v.lang.replace('_','-').toLowerCase()==='en-gb')}
-function voices(){el('voiceInfo').textContent='英式英语 · 在线词典词音'}
+function voices(){el('voiceInfo').textContent='英式英语 · 词典音频或设备英音'}
 const audioSegments={"green ride": ["green", "ride"], "hero(es)": ["heroes"], "land-fill site": ["land", "fill", "site"], "historical photo": ["historical", "photo"], "artists’ club": ["artists", "club"], "recent reward": ["recent", "reward"], "silver setting": ["silver", "setting"], "project outline": ["project", "outline"], "study ability": ["study", "ability"], "sick-pay": ["sick", "pay"], "list of objective": ["list", "of", "objective"]};let player=new Audio();
-function speakWord(callback,id){player.pause();let word=list[idx][0],queue=audioSegments[word]||[word],position=0;function start(){if(id!==runId)return;player.src='https://dict.youdao.com/dictvoice?type=1&audio='+encodeURIComponent(queue[position]);player.playbackRate=Number(el('rate').value);player.onended=()=>{if(id!==runId)return;position++;if(position<queue.length)start();else callback()};player.onerror=()=>{if(id!==runId)return;stop();el('status').textContent='音频加载失败，请点击重试'};el('status').textContent='正在播放英音…';player.play().catch(()=>{if(id!==runId)return;stop();el('status').textContent='播放中断，请点击重试'})}start()}
+function speakWord(callback, id) {
+  player.pause();
+  const word = list[idx][0];
+  const queue = audioSegments[word] || [word];
+  const rate = Number(el('rate').value);
+  let position = 0;
+  let attempt = 0;
+
+  function failed(currentAttempt, error) {
+    if (id !== runId || currentAttempt !== attempt) return;
+    attempt++;
+    player.onerror = player.onended = null;
+    if (error?.name === 'NotAllowedError') {
+      stop();
+      el('status').textContent = '浏览器需要手动开始播放，请点播放继续';
+      return;
+    }
+    const voice = 'speechSynthesis' in window ? britishVoice() : null;
+    if (!voice) {
+      stop();
+      el('status').textContent = '英音暂时无法加载，请点击重试';
+      return;
+    }
+    const speech = new SpeechSynthesisUtterance(queue.slice(position).join(' '));
+    speech.voice = voice;
+    speech.lang = voice.lang;
+    speech.rate = rate;
+    speech.onend = () => { if (id === runId) callback(); };
+    speech.onerror = () => {
+      if (id !== runId) return;
+      stop();
+      el('status').textContent = '英音暂时无法播放，请点击重试';
+    };
+    el('status').textContent = '正在用设备英音朗读…';
+    speechSynthesis.speak(speech);
+  }
+
+  function start() {
+    if (id !== runId) return;
+    const currentAttempt = ++attempt;
+    player.src = word === 'new opera'
+      ? './audio/word-94.mp3'
+      : 'https://dict.youdao.com/dictvoice?type=1&audio=' + encodeURIComponent(queue[position]);
+    player.playbackRate = rate;
+    player.onended = () => {
+      if (id !== runId || currentAttempt !== attempt) return;
+      if (++position < queue.length) start();
+      else callback();
+    };
+    player.onerror = () => failed(currentAttempt);
+    el('status').textContent = '正在播放英音…';
+    player.play().catch(error => failed(currentAttempt, error));
+  }
+  start();
+}
 function play(){if(currentMode==='dict'){stop();speakWord(()=>el('status').textContent='可以再听一次',runId);return}if(running){stop();el('status').textContent='已暂停，点击继续当前词';return}running=true;document.querySelector('.play').textContent='Ⅱ';cycle(runId)}
 function cycle(id){if(!running||id!==runId)return;el('nowWord').textContent=list[idx][0]+' '+(phonetics[list[idx][0]]||'')+' · '+list[idx][1];el('count').textContent=(idx+1)+' / '+list.length;el('progress').value=idx;syncSeek();speakWord(()=>{timer=setTimeout(()=>{if(!running||id!==runId)return;speakWord(()=>{timer=setTimeout(()=>{if(!running||id!==runId)return;if(idx+1===list.length){if(!el('loop').checked){stop();el('status').textContent='本轮播放完成';return}idx=0}else idx++;cycle(id)},Number(el('gap').value))},id)},700)},id)}
 function save(){queueServerSave();try{localStorage.setItem(studyKey('ielts-wrong'),JSON.stringify(wrong))}catch{}}function check(){if(done){next();return}let a=el('answer').value.trim().toLowerCase().replace(/\s+/g,' ');if(!a){el('result').textContent='请先写下答案，或点“跳过”。';return}let word=list[idx][0],ok=a===word.toLowerCase();if(!ok&&!wrong[part].includes(word))wrong[part].push(word);if(!ok&&reviewLevel>0&&!secondWrong[part].includes(word)){secondWrong[part].push(word);saveSecond()}save();el('result').textContent=(ok?'✓ 拼写正确':'再记一次')+' · '+word+' '+(phonetics[word]||'')+' — '+list[idx][1];done=true;el('answer').readOnly=true;el('check').textContent=idx===list.length-1?'完成本轮':'下一个词 →';if(currentMode==='dict'&&el('autoDict').checked){dictTimer=setTimeout(()=>{if(!el('autoDict').checked||currentMode!=='dict')return;if(idx===list.length-1){el('autoDict').checked=false;el('status').textContent='本轮听写完成';return}next()},ok?2000:5000)}}function next(){if(!done&&!wrong[part].includes(list[idx][0])){wrong[part].push(list[idx][0]);save()}if(idx+1===list.length){alert('本轮完成！Part '+part+' 当前有 '+wrong[part].length+' 个待复习词。');idx=0}else idx++;render()}let normalPosition={1:0,4:0},reviewLevel=0,shownWrongLevel=1,secondWrong={1:[],4:[]};try{secondWrong=JSON.parse(localStorage.getItem(studyKey('ielts-second-wrong')))||secondWrong}catch{}function exportWrong(){let lines=['雅思听力错词清单','导出时间：'+new Date().toLocaleString(),''];for(let p of [1,4]){for(let [title,store] of [['原错词清单',wrong],['二次错词清单',secondWrong]]){let words=store[p]||[];lines.push('Part '+p+' · '+title+'（'+words.length+' 个）');if(!words.length)lines.push('暂无');words.forEach((w,i)=>{let item=banks[p].find(x=>x[0]===w);lines.push((i+1)+'. '+w+'\t'+(phonetics[w]||'')+'\t'+(item?item[1]:''))});lines.push('')}}let blob=new Blob(['\ufeff'+lines.join('\r\n')],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='雅思听力错词-'+new Date().toISOString().slice(0,10)+'.txt';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000)}
